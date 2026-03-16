@@ -537,7 +537,8 @@ async function validateSelection() {
   await chrome.runtime.sendMessage({ type: "selection:set", selection });
 
   currentSelection = selection;
-  setStatus("OK. Le badge va se mettre à jour.");
+  // Ferme le popup après validation
+  window.close();
 }
 
 function applyExistingSelection(selection) {
