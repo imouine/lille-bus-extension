@@ -1,0 +1,54 @@
+<!--
+  Lille Bus Extension
+  Author: imouine
+  Copyright (c) 2026
+  License: GPL-3.0
+  https://github.com/imouine/lille-bus-extension
+-->
+
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lille Bus</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Lille Bus</h1>
+
+      <section aria-label="Choix de l'arrêt">
+        <label for="stopSearch">Arrêt</label>
+        <input
+          id="stopSearch"
+          type="text"
+          placeholder="Tape le nom de l’arrêt"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <div id="stopHint" class="hint"></div>
+        <ul id="stopResults" class="list" role="listbox" aria-label="Suggestions d’arrêts"></ul>
+      </section>
+
+      <section id="lineSection" class="hidden" aria-label="Choix de la ligne">
+        <div class="sectionTitle">Ligne</div>
+        <ul id="lineResults" class="list"></ul>
+      </section>
+
+      <section id="directionSection" class="hidden" aria-label="Choix du sens">
+        <div class="sectionTitle">Sens</div>
+        <ul id="directionResults" class="list"></ul>
+      </section>
+
+      <section id="validateSection" class="hidden" aria-label="Validation">
+        <div id="summary" class="summary"></div>
+        <button id="validateBtn" type="button">Valider</button>
+      </section>
+
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+    </main>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

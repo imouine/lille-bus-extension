@@ -4,8 +4,10 @@
   "version": "0.1.0",
   "description": "Display the next bus arrival time for Lille public transport directly on the extension icon using the Extension Action Badge.",
   "permissions": ["storage", "alarms"],
+  "host_permissions": ["https://data.lillemetropole.fr/*"],
   "action": {
-    "default_title": "Lille Bus Extension"
+    "default_title": "Lille Bus Extension",
+    "default_popup": "popup/popup.html"
   },
   "background": {
     "service_worker": "background/service-worker.js"

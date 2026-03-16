@@ -1,0 +1,104 @@
+/*
+ * Lille Bus Extension
+ * Author: imouine
+ * Copyright (c) 2026
+ * License: GPL-3.0
+ * https://github.com/imouine/lille-bus-extension
+ */
+
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+
+main {
+  width: 320px;
+  padding: 12px;
+}
+
+h1 {
+  font-size: 16px;
+  margin: 0 0 10px;
+}
+
+label {
+  display: block;
+  font-size: 12px;
+  opacity: 0.85;
+  margin-bottom: 6px;
+}
+
+input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px;
+  border: 1px solid rgba(127, 127, 127, 0.4);
+  border-radius: 8px;
+  outline: none;
+}
+
+.hint {
+  font-size: 12px;
+  opacity: 0.8;
+  margin: 8px 0 0;
+  min-height: 16px;
+}
+
+.sectionTitle {
+  margin: 12px 0 6px;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.list {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  max-height: 160px;
+  overflow: auto;
+  border-radius: 8px;
+}
+
+.list li {
+  margin: 0;
+}
+
+.list button {
+  width: 100%;
+  text-align: left;
+  padding: 8px;
+  border: 1px solid rgba(127, 127, 127, 0.25);
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  margin-bottom: 6px;
+}
+
+.summary {
+  margin: 12px 0 8px;
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+#validateBtn {
+  width: 100%;
+  padding: 10px;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.status {
+  margin-top: 10px;
+  font-size: 12px;
+  min-height: 16px;
+  opacity: 0.9;
+}
+
+.hidden {
+  display: none;
+}
