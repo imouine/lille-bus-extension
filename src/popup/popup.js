@@ -21,6 +21,7 @@ const STORAGE_KEYS = {
   selection: "selection",
   stopsCache: "stopsCache",
   directionCache: "directionCache",
+  regularBusStopsCache: "regularBusStopsCache",
 };
 
 const el = {
@@ -50,6 +51,9 @@ let currentSelection = null;
 
 /** @type {Array<{label: string, canonical: string, norm: string}>} */
 let cachedStops = [];
+
+/** @type {Set<string>} */
+let regularBusStopCanonicals = new Set();
 
 /** @type {Array<any>} */
 let stopLiveRecords = [];
@@ -188,6 +192,15 @@ function resetAfterStopPick() {
 async function ensureStopsCacheLoaded() {
   // Cache 7j (référentiel très stable)
   const TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+  // Charge la liste des arrêts bus réguliers (pour filtrer tram + arrêts spéciaux)
+  try {
+    await ensureRegularBusStopsLoaded();
+  } catch (e) {
+    console.error(e);
+    regularBusStopCanonicals = new Set();
+  }
+
   const { [STORAGE_KEYS.stopsCache]: stopsCache } = await getFromStorage([
     STORAGE_KEYS.stopsCache,
   ]);
@@ -199,6 +212,11 @@ async function ensureStopsCacheLoaded() {
     if (fresh && Array.isArray(stopsCache.stopEntries)) {
       cachedStops = stopsCache.stopEntries
         .filter((x) => x && typeof x.label === "string" && typeof x.canonical === "string")
+        .filter(
+          (x) =>
+            regularBusStopCanonicals.size === 0 ||
+            regularBusStopCanonicals.has(String(x.canonical).toUpperCase())
+        )
         .map((x) => ({
           label: x.label,
           canonical: x.canonical,
@@ -210,7 +228,7 @@ async function ensureStopsCacheLoaded() {
     // Ancien format: stopNames ["..."] -> on ignore pour migrer vers arret_point
   }
 
-  setStatus("Chargement des arrêts (référentiel)…");
+  setStatus("Chargement des arrêts (bus)…");
 
   // Pagination simple par offset
   const limit = 2000;
@@ -248,6 +266,7 @@ async function ensureStopsCacheLoaded() {
 
   cachedStops = Array.from(byCanonical.values())
     .sort((a, b) => a.label.localeCompare(b.label, "fr"))
+    .filter((x) => regularBusStopCanonicals.size === 0 || regularBusStopCanonicals.has(x.canonical))
     .map((x) => ({ ...x, norm: normalizeForSearch(x.label) }));
 
   await setInStorage({
@@ -275,6 +294,100 @@ function splitLineCodes(value) {
     .filter(Boolean);
 }
 
+function isRegularBusLineCode(code) {
+  if (typeof code !== "string") return false;
+  const c = code.trim().toUpperCase();
+  if (!c) return false;
+
+  // Exclusions
+  if (c === "TRAM" || c === "METRO") return false;
+  if (c.startsWith("N")) return false; // ex: N1 (spécial / remplacement)
+
+  // Lignes "habituelles"
+  return /^L\d+$/.test(c) || /^\d+$/.test(c) || /^CO\d+$/.test(c);
+}
+
+async function ensureRegularBusStopsLoaded() {
+  // Cache 7j
+  const TTL_MS = 7 * 24 * 60 * 60 * 1000;
+  const { [STORAGE_KEYS.regularBusStopsCache]: cache } = await getFromStorage([
+    STORAGE_KEYS.regularBusStopsCache,
+  ]);
+
+  if (
+    cache &&
+    typeof cache.updatedAt === "number" &&
+    Array.isArray(cache.stopCanonicals) &&
+    Date.now() - cache.updatedAt < TTL_MS
+  ) {
+    regularBusStopCanonicals = new Set(cache.stopCanonicals);
+    return;
+  }
+
+  const limit = 2000;
+  let offset = 0;
+  let numberMatched = null;
+  /** @type {Set<string>} */
+  const canonicals = new Set();
+
+  let supportsApiFilter = true;
+  const apiFilter = `code_mode_de_transport=${cqlQuote("B")}`;
+
+  while (true) {
+    let json;
+    try {
+      const url = supportsApiFilter
+        ? buildUrlFrom(STOPS_LINES_API_URL, { limit, offset, filter: apiFilter })
+        : buildUrlFrom(STOPS_LINES_API_URL, { limit, offset });
+      json = await fetchJson(url);
+    } catch (e) {
+      if (supportsApiFilter) {
+        supportsApiFilter = false;
+        continue;
+      }
+      throw e;
+    }
+
+    const records = Array.isArray(json.records) ? json.records : [];
+
+    if (typeof json.numberMatched === "number" && numberMatched === null) {
+      numberMatched = json.numberMatched;
+    }
+
+    for (const r of records) {
+      if (!r) continue;
+      if (
+        typeof r.code_mode_de_transport === "string" &&
+        r.code_mode_de_transport.toUpperCase() !== "B"
+      ) {
+        continue;
+      }
+
+      const stop =
+        typeof r.nom_commercial_arret === "string" ? r.nom_commercial_arret.trim() : "";
+      if (!stop) continue;
+
+      const lineCodes = splitLineCodes(r.code_ligne_public || r.code_ligne);
+      if (!lineCodes.some(isRegularBusLineCode)) continue;
+
+      canonicals.add(stop.toUpperCase());
+    }
+
+    offset += records.length;
+    if (!records.length) break;
+    if (numberMatched !== null && offset >= numberMatched) break;
+    if (offset > 200000) break;
+  }
+
+  regularBusStopCanonicals = canonicals;
+  await setInStorage({
+    [STORAGE_KEYS.regularBusStopsCache]: {
+      updatedAt: Date.now(),
+      stopCanonicals: Array.from(canonicals),
+    },
+  });
+}
+
 async function fetchStopLineCodes(stopName) {
   const candidates = [
     { field: "nom_commercial_arret", value: stopName },
@@ -294,7 +407,7 @@ async function fetchStopLineCodes(stopName) {
         codes.push(...splitLineCodes(v));
       }
 
-      const lines = uniqueSorted(codes);
+      const lines = uniqueSorted(codes).filter(isRegularBusLineCode);
       if (lines.length) return lines;
     } catch (e) {
       console.error(e);
@@ -338,7 +451,7 @@ async function onPickStop(stopItem) {
         stopLiveRecords
           .map((r) => r && r.code_ligne)
           .filter((v) => typeof v === "string" && v.trim())
-      );
+      ).filter(isRegularBusLineCode);
     } catch (e) {
       console.error(e);
       setStatus("Erreur réseau pendant le chargement des lignes.");
