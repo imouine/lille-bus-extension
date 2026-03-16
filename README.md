@@ -3,7 +3,7 @@
 ![Manifest V3](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4)
 ![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue)
 
-Chrome extension (Manifest V3) that shows the minutes until your next bus directly on the extension icon badge.
+Chrome extension (Manifest V3) for the Lille metropolitan area (Métropole Européenne de Lille / MEL) that shows the minutes until your next bus directly on the extension icon badge.
 
 It includes a popup to configure your stop/line/direction, then refreshes the badge automatically every minute.
 
@@ -55,7 +55,7 @@ In the popup, use **Preferences/Préférences** to:
 
 ## Data sources
 
-This extension uses public open data from Lille Métropole (OGC API Features):
+This extension uses public open data from the Métropole Européenne de Lille (MEL) (OGC API Features):
 
 - Next arrivals: `ilevia:prochains_passages`
 - Stops reference: `ilevia:arret_point`
@@ -90,7 +90,7 @@ PRs welcome.
 
 ## Disclaimer
 
-This project is not affiliated with, endorsed by, or sponsored by any public transport operator.
+This project is not affiliated with, endorsed by, or sponsored by any public transport operator. It is intended for the Lille metropolitan area (MEL) only.
 
 ## License
 
