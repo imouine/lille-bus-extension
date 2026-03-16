@@ -1,4 +1,12 @@
-body {
+/*
+ * Lille Bus Extension
+ * Author: imouine
+ * Copyright (c) 2026
+ * License: GPL-3.0
+ * https://github.com/imouine/lille-bus-extension
+ */
+ 
+ body {
   font-family: Arial, sans-serif;
   margin: 24px;
 }
