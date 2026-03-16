@@ -6,12 +6,21 @@
  * https://github.com/imouine/lille-bus-extension
  */
 
-const API_URL =
+const LIVE_API_URL =
   "https://data.lillemetropole.fr/data/ogcapi/collections/ilevia%3Aprochains_passages/items?f=json";
+
+// Référentiel complet des arrêts (GTFS)
+const STOPS_LIST_API_URL =
+  "https://data.lillemetropole.fr/data/ogcapi/collections/ilevia%3Aarret_point/items?f=json";
+
+// Mapping arrêt -> lignes (utile même hors service)
+const STOPS_LINES_API_URL =
+  "https://data.lillemetropole.fr/data/ogcapi/collections/ilevia%3Aphysical_stop/items?f=json";
 
 const STORAGE_KEYS = {
   selection: "selection",
   stopsCache: "stopsCache",
+  directionCache: "directionCache",
 };
 
 const el = {
@@ -28,18 +37,19 @@ const el = {
   status: document.getElementById("status"),
 };
 
-/** @type {{stopName: string|null, lineCode: string|null, direction: string|null}} */
+/** @type {{stopName: string|null, stopLabel: string|null, lineCode: string|null, direction: string|null}} */
 let draft = {
   stopName: null,
+  stopLabel: null,
   lineCode: null,
   direction: null,
 };
 
-/** @type {{stopName: string, lineCode: string, direction: string}|null} */
+/** @type {{stopName: string, stopLabel?: string, lineCode: string, direction: string}|null} */
 let currentSelection = null;
 
-/** @type {Array<string>} */
-let cachedStopNames = [];
+/** @type {Array<{label: string, canonical: string, norm: string}>} */
+let cachedStops = [];
 
 /** @type {Array<any>} */
 let stopLiveRecords = [];
@@ -61,7 +71,16 @@ function cqlQuote(value) {
 }
 
 function buildUrl(params) {
-  const url = new URL(API_URL);
+  const url = new URL(LIVE_API_URL);
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null) continue;
+    url.searchParams.set(key, String(value));
+  }
+  return url.toString();
+}
+
+function buildUrlFrom(baseUrl, params) {
+  const url = new URL(baseUrl);
   for (const [key, value] of Object.entries(params)) {
     if (value === undefined || value === null) continue;
     url.searchParams.set(key, String(value));
@@ -92,13 +111,13 @@ async function setInStorage(obj) {
 }
 
 function normalizeForSearch(value) {
-  return value
+  return String(value)
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
     .toLowerCase();
 }
 
-function renderStopSuggestions(stopNames, query) {
+function renderStopSuggestions(stopItems, query) {
   clearList(el.stopResults);
 
   if (!query || query.trim().length < 2) {
@@ -106,16 +125,16 @@ function renderStopSuggestions(stopNames, query) {
     return;
   }
 
-  el.stopHint.textContent = stopNames.length
+  el.stopHint.textContent = stopItems.length
     ? ""
     : "Aucune suggestion (essaye un autre nom).";
 
-  for (const name of stopNames.slice(0, 12)) {
+  for (const item of stopItems.slice(0, 12)) {
     const li = document.createElement("li");
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.textContent = name;
-    btn.addEventListener("click", () => onPickStop(name));
+    btn.textContent = item.label;
+    btn.addEventListener("click", () => onPickStop(item));
     li.appendChild(btn);
     el.stopResults.appendChild(li);
   }
@@ -152,7 +171,7 @@ function updateValidateSection() {
   show(el.validateSection, ready);
   if (!ready) return;
 
-  el.summary.textContent = `Arrêt: ${draft.stopName} — Ligne: ${draft.lineCode} — Sens: ${draft.direction}`;
+  el.summary.textContent = `Arrêt: ${draft.stopLabel || draft.stopName} — Ligne: ${draft.lineCode} — Sens: ${draft.direction}`;
 }
 
 function resetAfterStopPick() {
@@ -167,33 +186,41 @@ function resetAfterStopPick() {
 }
 
 async function ensureStopsCacheLoaded() {
-  // Cache 12h (prochains_passages bouge, mais les noms d’arrêts sont stables)
-  const TTL_MS = 12 * 60 * 60 * 1000;
+  // Cache 7j (référentiel très stable)
+  const TTL_MS = 7 * 24 * 60 * 60 * 1000;
   const { [STORAGE_KEYS.stopsCache]: stopsCache } = await getFromStorage([
     STORAGE_KEYS.stopsCache,
   ]);
 
-  if (
-    stopsCache &&
-    Array.isArray(stopsCache.stopNames) &&
-    typeof stopsCache.updatedAt === "number" &&
-    Date.now() - stopsCache.updatedAt < TTL_MS
-  ) {
-    cachedStopNames = stopsCache.stopNames;
-    return;
+  if (stopsCache && typeof stopsCache.updatedAt === "number") {
+    const fresh = Date.now() - stopsCache.updatedAt < TTL_MS;
+
+    // Nouveau format: stopEntries [{label, canonical}]
+    if (fresh && Array.isArray(stopsCache.stopEntries)) {
+      cachedStops = stopsCache.stopEntries
+        .filter((x) => x && typeof x.label === "string" && typeof x.canonical === "string")
+        .map((x) => ({
+          label: x.label,
+          canonical: x.canonical,
+          norm: normalizeForSearch(x.label),
+        }));
+      return;
+    }
+
+    // Ancien format: stopNames ["..."] -> on ignore pour migrer vers arret_point
   }
 
-  setStatus("Chargement des arrêts…");
+  setStatus("Chargement des arrêts (référentiel)…");
 
-  // Pagination simple par offset (si tout tient en une page, ça s’arrête direct)
-  const limit = 1000;
+  // Pagination simple par offset
+  const limit = 2000;
   let offset = 0;
-  /** @type {Set<string>} */
-  const names = new Set();
+  /** @type {Map<string, {label: string, canonical: string}>} */
+  const byCanonical = new Map();
   let numberMatched = null;
 
   while (true) {
-    const url = buildUrl({ limit, offset });
+    const url = buildUrlFrom(STOPS_LIST_API_URL, { limit, offset });
     const json = await fetchJson(url);
     const records = Array.isArray(json.records) ? json.records : [];
 
@@ -202,33 +229,79 @@ async function ensureStopsCacheLoaded() {
     }
 
     for (const r of records) {
-      if (r && typeof r.nom_station === "string" && r.nom_station.trim()) {
-        names.add(r.nom_station.trim());
+      // arret_point -> stop_name (casse “humaine”)
+      if (r && typeof r.stop_name === "string") {
+        const label = r.stop_name.trim();
+        if (!label) continue;
+        const canonical = label.toUpperCase();
+        if (!byCanonical.has(canonical)) {
+          byCanonical.set(canonical, { label, canonical });
+        }
       }
     }
 
     offset += records.length;
     if (!records.length) break;
     if (numberMatched !== null && offset >= numberMatched) break;
-    if (offset > 20000) break; // garde-fou
+    if (offset > 200000) break; // garde-fou
   }
 
-  cachedStopNames = Array.from(names).sort((a, b) => a.localeCompare(b, "fr"));
+  cachedStops = Array.from(byCanonical.values())
+    .sort((a, b) => a.label.localeCompare(b.label, "fr"))
+    .map((x) => ({ ...x, norm: normalizeForSearch(x.label) }));
+
   await setInStorage({
     [STORAGE_KEYS.stopsCache]: {
       updatedAt: Date.now(),
-      stopNames: cachedStopNames,
+      stopEntries: cachedStops.map(({ label, canonical }) => ({ label, canonical })),
     },
   });
 
   setStatus("");
 }
 
-async function fetchStopRecords(stopName) {
+async function fetchLiveStopRecords(stopName) {
   const filter = `nom_station=${cqlQuote(stopName)}`;
-  const url = buildUrl({ limit: 200, filter });
+  const url = buildUrlFrom(LIVE_API_URL, { limit: 200, filter });
   const json = await fetchJson(url);
   return Array.isArray(json.records) ? json.records : [];
+}
+
+function splitLineCodes(value) {
+  if (typeof value !== "string") return [];
+  return value
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
+}
+
+async function fetchStopLineCodes(stopName) {
+  const candidates = [
+    { field: "nom_commercial_arret", value: stopName },
+    { field: "nom_court", value: stopName },
+  ];
+
+  for (const c of candidates) {
+    try {
+      const filter = `${c.field}=${cqlQuote(c.value)}`;
+      const url = buildUrlFrom(STOPS_LINES_API_URL, { limit: 200, filter });
+      const json = await fetchJson(url);
+      const records = Array.isArray(json.records) ? json.records : [];
+
+      const codes = [];
+      for (const r of records) {
+        const v = r && (r.code_ligne_public || r.code_ligne);
+        codes.push(...splitLineCodes(v));
+      }
+
+      const lines = uniqueSorted(codes);
+      if (lines.length) return lines;
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  return [];
 }
 
 function uniqueSorted(values) {
@@ -237,45 +310,97 @@ function uniqueSorted(values) {
   );
 }
 
-async function onPickStop(stopName) {
-  draft.stopName = stopName;
+async function onPickStop(stopItem) {
+  const label = typeof stopItem === "string" ? stopItem : stopItem.label;
+  const canonical =
+    typeof stopItem === "string" ? stopItem.toUpperCase() : stopItem.canonical;
+
+  draft.stopLabel = label;
+  draft.stopName = canonical;
+  el.stopSearch.value = label;
+
   resetAfterStopPick();
   setStatus("Chargement des lignes…");
 
+  let lines = [];
   try {
-    stopLiveRecords = await fetchStopRecords(stopName);
+    // Référentiel (toujours dispo, même hors service)
+    lines = await fetchStopLineCodes(canonical);
   } catch (e) {
     console.error(e);
-    setStatus("Erreur réseau pendant le chargement des lignes.");
-    return;
   }
 
-  const lines = uniqueSorted(
-    stopLiveRecords
-      .map((r) => r && r.code_ligne)
-      .filter((v) => typeof v === "string" && v.trim())
-  );
+  if (!lines.length) {
+    // Fallback live (au cas où)
+    try {
+      stopLiveRecords = await fetchLiveStopRecords(canonical);
+      lines = uniqueSorted(
+        stopLiveRecords
+          .map((r) => r && r.code_ligne)
+          .filter((v) => typeof v === "string" && v.trim())
+      );
+    } catch (e) {
+      console.error(e);
+      setStatus("Erreur réseau pendant le chargement des lignes.");
+      return;
+    }
+  }
 
   show(el.lineSection, true);
   renderLineChoices(lines);
-  setStatus(lines.length ? "" : "Aucune ligne trouvée pour cet arrêt." );
+  setStatus(lines.length ? "" : "Aucune ligne trouvée pour cet arrêt.");
 }
 
-function onPickLine(lineCode) {
+async function onPickLine(lineCode) {
   draft.lineCode = lineCode;
   draft.direction = null;
 
-  const directions = uniqueSorted(
-    stopLiveRecords
-      .filter((r) => r && r.code_ligne === lineCode)
-      .map((r) => r && r.sens_ligne)
-      .filter((v) => typeof v === "string" && v.trim())
-  );
+  const cacheKey = `${draft.stopName}||${lineCode}`;
+  const { [STORAGE_KEYS.directionCache]: directionCache } = await getFromStorage([
+    STORAGE_KEYS.directionCache,
+  ]);
+
+  let directions = [];
+
+  try {
+    // Live: récupère les sens réellement utilisés
+    stopLiveRecords = await fetchLiveStopRecords(draft.stopName);
+    directions = uniqueSorted(
+      stopLiveRecords
+        .filter((r) => r && r.code_ligne === lineCode)
+        .map((r) => r && r.sens_ligne)
+        .filter((v) => typeof v === "string" && v.trim())
+    );
+  } catch (e) {
+    console.error(e);
+  }
+
+  // Si pas de service maintenant, fallback sur un cache de sens déjà vus.
+  if (!directions.length && directionCache && Array.isArray(directionCache[cacheKey])) {
+    directions = uniqueSorted(directionCache[cacheKey]);
+  }
+
+  // Si on a des sens live, on les met en cache.
+  if (directions.length) {
+    const next = { ...(directionCache || {}) };
+    next[cacheKey] = directions;
+    await setInStorage({ [STORAGE_KEYS.directionCache]: next });
+  }
+
+  if (!directions.length) {
+    show(el.directionSection, false);
+    clearList(el.directionResults);
+    updateValidateSection();
+    setStatus(
+      "Pas de sens disponible maintenant (ligne hors service). Réessaie plus tard."
+    );
+    return;
+  }
 
   show(el.directionSection, true);
   renderDirectionChoices(directions);
   updateValidateSection();
-  setStatus(directions.length ? "" : "Aucun sens trouvé pour cette ligne." );
+  setStatus("");
 }
 
 function onPickDirection(direction) {
@@ -288,6 +413,7 @@ async function validateSelection() {
 
   const selection = {
     stopName: draft.stopName,
+    stopLabel: draft.stopLabel || undefined,
     lineCode: draft.lineCode,
     direction: draft.direction,
   };
@@ -305,8 +431,13 @@ function applyExistingSelection(selection) {
   currentSelection = selection;
   if (!selection) return;
 
-  el.stopSearch.value = selection.stopName;
-  draft = { ...selection };
+  el.stopSearch.value = selection.stopLabel || selection.stopName;
+  draft = {
+    stopName: selection.stopName,
+    stopLabel: selection.stopLabel || selection.stopName,
+    lineCode: selection.lineCode,
+    direction: selection.direction,
+  };
   el.stopHint.textContent = "Sélection actuelle chargée.";
   updateValidateSection();
 }
@@ -314,6 +445,7 @@ function applyExistingSelection(selection) {
 function onStopInput() {
   const query = el.stopSearch.value;
   draft.stopName = null;
+  draft.stopLabel = null;
   resetAfterStopPick();
   updateValidateSection();
 
@@ -323,14 +455,19 @@ function onStopInput() {
     return;
   }
 
-  const matches = [];
-  for (const name of cachedStopNames) {
-    if (normalizeForSearch(name).includes(q)) {
-      matches.push(name);
-      if (matches.length >= 20) break;
-    }
+  /** @type {Array<{label: string, canonical: string, norm: string}>} */
+  const prefix = [];
+  /** @type {Array<{label: string, canonical: string, norm: string}>} */
+  const contains = [];
+
+  for (const item of cachedStops) {
+    if (!item.norm.includes(q)) continue;
+    if (item.norm.startsWith(q)) prefix.push(item);
+    else contains.push(item);
+    if (prefix.length + contains.length >= 60) break;
   }
-  renderStopSuggestions(matches, query);
+
+  renderStopSuggestions(prefix.concat(contains), query);
 }
 
 async function init() {
