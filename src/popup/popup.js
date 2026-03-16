@@ -17,11 +17,16 @@ const STOPS_LIST_API_URL =
 const STOPS_LINES_API_URL =
   "https://data.lillemetropole.fr/data/ogcapi/collections/ilevia%3Aphysical_stop/items?f=json";
 
+// Couleurs (sert de “logo”/badge pour les lignes)
+const LINE_COLORS_API_URL =
+  "https://data.lillemetropole.fr/data/ogcapi/collections/ilevia%3Acouleurs_lignes/items?f=json";
+
 const STORAGE_KEYS = {
   selection: "selection",
   stopsCache: "stopsCache",
   directionCache: "directionCache",
   regularBusStopsCache: "regularBusStopsCache",
+  lineColorsCache: "lineColorsCache",
 };
 
 const el = {
@@ -57,6 +62,9 @@ let regularBusStopCanonicals = new Set();
 
 /** @type {Array<any>} */
 let stopLiveRecords = [];
+
+/** @type {Record<string, {bg: string, fg: string}>} */
+let lineColorsByCode = {};
 
 function setStatus(message) {
   el.status.textContent = message || "";
@@ -150,11 +158,81 @@ function renderLineChoices(lines) {
     const li = document.createElement("li");
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.textContent = line;
+    btn.classList.add("lineOption");
+    btn.setAttribute("aria-label", `Ligne ${line}`);
+
+    const pill = document.createElement("span");
+    pill.className = "linePill";
+    pill.textContent = line;
+
+    const colors = lineColorsByCode[String(line).toUpperCase()];
+    if (colors && colors.bg) pill.style.backgroundColor = colors.bg;
+    if (colors && colors.fg) pill.style.color = colors.fg;
+
+    btn.appendChild(pill);
     btn.addEventListener("click", () => onPickLine(line));
     li.appendChild(btn);
     el.lineResults.appendChild(li);
   }
+}
+
+function normalizeHexColor(value) {
+  if (typeof value !== "string") return null;
+  const v = value.trim().replace(/^#/, "");
+  if (!/^[0-9a-fA-F]{6}$/.test(v)) return null;
+  return `#${v.toUpperCase()}`;
+}
+
+async function ensureLineColorsLoaded() {
+  // Cache 30j
+  const TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+  const { [STORAGE_KEYS.lineColorsCache]: cache } = await getFromStorage([
+    STORAGE_KEYS.lineColorsCache,
+  ]);
+
+  if (
+    cache &&
+    typeof cache.updatedAt === "number" &&
+    cache.colorsByCode &&
+    typeof cache.colorsByCode === "object" &&
+    Date.now() - cache.updatedAt < TTL_MS
+  ) {
+    lineColorsByCode = cache.colorsByCode;
+    return;
+  }
+
+  const json = await fetchJson(buildUrlFrom(LINE_COLORS_API_URL, { limit: 3000 }));
+  const records = Array.isArray(json.records) ? json.records : [];
+
+  /** @type {Record<string, {bg: string, fg: string}>} */
+  const next = {};
+  for (const r of records) {
+    if (!r) continue;
+
+    const mode = typeof r.mode_transport === "string" ? r.mode_transport.toUpperCase() : "";
+    if (mode && mode !== "BUS") continue;
+
+    const bg = normalizeHexColor(r.couleur_fond_hexadecimal);
+    const fg = normalizeHexColor(r.couleur_texte_hexadecimal);
+    if (!bg && !fg) continue;
+
+    const codes = [r.code_ligne_public, r.code_ligne]
+      .map((v) => (v === undefined || v === null ? "" : String(v).trim()))
+      .filter(Boolean);
+
+    for (const c of codes) {
+      next[c.toUpperCase()] = { bg: bg || "", fg: fg || "" };
+    }
+  }
+
+  lineColorsByCode = next;
+  await setInStorage({
+    [STORAGE_KEYS.lineColorsCache]: {
+      updatedAt: Date.now(),
+      colorsByCode: next,
+    },
+  });
 }
 
 function renderDirectionChoices(directions) {
@@ -600,6 +678,14 @@ async function init() {
     console.error(e);
     el.stopHint.textContent =
       "Impossible de charger la liste d’arrêts (réseau/permission).";
+  }
+
+  // Optionnel: sert juste à afficher des badges colorés pour les lignes.
+  try {
+    await ensureLineColorsLoaded();
+  } catch (e) {
+    console.error(e);
+    lineColorsByCode = {};
   }
 
   el.stopSearch.addEventListener("input", onStopInput);
