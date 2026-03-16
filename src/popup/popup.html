@@ -17,11 +17,12 @@
   <body>
     <main>
       <section aria-label="Choix de l'arrêt">
-        <label for="stopSearch">Arrêt</label>
+        <label for="stopSearch" data-i18n="label_stop">Arrêt</label>
         <input
           id="stopSearch"
           type="text"
           placeholder="Tape le nom de l’arrêt"
+          data-i18n-placeholder="placeholder_stop"
           autocomplete="off"
           spellcheck="false"
         />
@@ -30,18 +31,34 @@
       </section>
 
       <section id="lineSection" class="hidden" aria-label="Choix de la ligne">
-        <div class="sectionTitle">Ligne</div>
+        <div class="sectionTitle" data-i18n="title_line">Ligne</div>
         <ul id="lineResults" class="list"></ul>
       </section>
 
       <section id="directionSection" class="hidden" aria-label="Choix du sens">
-        <div class="sectionTitle">Sens</div>
+        <div class="sectionTitle" data-i18n="title_direction">Sens</div>
         <ul id="directionResults" class="list"></ul>
       </section>
 
       <section id="validateSection" class="hidden" aria-label="Validation">
         <div id="summary" class="summary"></div>
-        <button id="validateBtn" type="button">Valider</button>
+        <button id="validateBtn" type="button" data-i18n="btn_validate">Valider</button>
+      </section>
+
+      <section aria-label="Préférences">
+        <div class="sectionTitle" data-i18n="title_preferences">Préférences</div>
+
+        <label class="toggleRow">
+          <span class="toggleText" data-i18n="toggle_theme">Mode nuit</span>
+          <input id="themeToggle" class="toggleInput" type="checkbox" />
+          <span class="toggleSwitch" aria-hidden="true"></span>
+        </label>
+
+        <label class="toggleRow">
+          <span class="toggleText" data-i18n="toggle_lang">English</span>
+          <input id="langToggle" class="toggleInput" type="checkbox" />
+          <span class="toggleSwitch" aria-hidden="true"></span>
+        </label>
       </section>
 
       <div id="status" class="status" role="status" aria-live="polite"></div>

@@ -27,6 +27,7 @@ const STORAGE_KEYS = {
   directionCache: "directionCache",
   regularBusStopsCache: "regularBusStopsCache",
   lineColorsCache: "lineColorsCache",
+  prefs: "prefs",
 };
 
 const el = {
@@ -41,7 +42,115 @@ const el = {
   summary: document.getElementById("summary"),
   validateBtn: document.getElementById("validateBtn"),
   status: document.getElementById("status"),
+  themeToggle: document.getElementById("themeToggle"),
+  langToggle: document.getElementById("langToggle"),
 };
+
+/** @type {{theme: "light"|"dark", lang: "fr"|"en"}} */
+let prefs = { theme: "light", lang: "fr" };
+
+const I18N = {
+  fr: {
+    label_stop: "Arrêt",
+    placeholder_stop: "Tape le nom de l’arrêt",
+    title_line: "Ligne",
+    title_direction: "Sens",
+    btn_validate: "Valider",
+    title_preferences: "Préférences",
+    toggle_theme: "Mode nuit",
+    toggle_lang: "English",
+
+    hint_min_letters: "Tape au moins 2 lettres.",
+    hint_no_suggestion: "Aucune suggestion (essaye un autre nom).",
+    status_loading_stops: "Chargement des arrêts (bus)…",
+    status_loading_lines: "Chargement des lignes…",
+    status_no_lines: "Aucune ligne trouvée pour cet arrêt.",
+    status_lines_network_error: "Erreur réseau pendant le chargement des lignes.",
+    status_no_directions: "Pas de sens disponible maintenant (ligne hors service). Réessaie plus tard.",
+    status_saving: "Enregistrement…",
+    hint_selection_loaded: "Sélection actuelle chargée.",
+    hint_stops_load_failed: "Impossible de charger la liste d’arrêts (réseau/permission).",
+    summary_template: "Arrêt: {stop} — Ligne: {line} — Sens: {direction}",
+  },
+  en: {
+    label_stop: "Stop",
+    placeholder_stop: "Type the stop name",
+    title_line: "Line",
+    title_direction: "Direction",
+    btn_validate: "Save",
+    title_preferences: "Preferences",
+    toggle_theme: "Night mode",
+    toggle_lang: "Français",
+
+    hint_min_letters: "Type at least 2 letters.",
+    hint_no_suggestion: "No suggestions (try another name).",
+    status_loading_stops: "Loading stops (bus)…",
+    status_loading_lines: "Loading lines…",
+    status_no_lines: "No line found for this stop.",
+    status_lines_network_error: "Network error while loading lines.",
+    status_no_directions: "No direction available right now (line not running). Try later.",
+    status_saving: "Saving…",
+    hint_selection_loaded: "Current selection loaded.",
+    hint_stops_load_failed: "Unable to load stops list (network/permission).",
+    summary_template: "Stop: {stop} — Line: {line} — Direction: {direction}",
+  },
+};
+
+function t(key, vars) {
+  const lang = prefs.lang in I18N ? prefs.lang : "fr";
+  let s = (I18N[lang] && I18N[lang][key]) || I18N.fr[key] || key;
+  if (vars && typeof vars === "object") {
+    for (const [k, v] of Object.entries(vars)) {
+      s = s.replaceAll(`{${k}}`, String(v));
+    }
+  }
+  return s;
+}
+
+function applyTheme() {
+  document.documentElement.dataset.theme = prefs.theme;
+  if (el.themeToggle) el.themeToggle.checked = prefs.theme === "dark";
+}
+
+function applyLanguage() {
+  document.documentElement.lang = prefs.lang;
+  if (el.langToggle) el.langToggle.checked = prefs.lang === "en";
+
+  // textContent
+  for (const node of document.querySelectorAll("[data-i18n]")) {
+    const k = node.getAttribute("data-i18n");
+    if (!k) continue;
+    node.textContent = t(k);
+  }
+
+  // placeholders
+  for (const node of document.querySelectorAll("[data-i18n-placeholder]")) {
+    const k = node.getAttribute("data-i18n-placeholder");
+    if (!k) continue;
+    if (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement) {
+      node.placeholder = t(k);
+    }
+  }
+
+  // Recalcul des textes dynamiques
+  updateValidateSection();
+}
+
+async function loadPrefs() {
+  const { [STORAGE_KEYS.prefs]: stored } = await getFromStorage([STORAGE_KEYS.prefs]);
+  const theme = stored && (stored.theme === "dark" || stored.theme === "light") ? stored.theme : null;
+  const lang = stored && (stored.lang === "en" || stored.lang === "fr") ? stored.lang : null;
+
+  if (theme) prefs.theme = theme;
+  else prefs.theme = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+
+  if (lang) prefs.lang = lang;
+  else prefs.lang = "fr";
+}
+
+async function savePrefs() {
+  await setInStorage({ [STORAGE_KEYS.prefs]: prefs });
+}
 
 /** @type {{stopName: string|null, stopLabel: string|null, lineCode: string|null, direction: string|null}} */
 let draft = {
@@ -133,13 +242,13 @@ function renderStopSuggestions(stopItems, query) {
   clearList(el.stopResults);
 
   if (!query || query.trim().length < 2) {
-    el.stopHint.textContent = "Tape au moins 2 lettres.";
+    el.stopHint.textContent = t("hint_min_letters");
     return;
   }
 
   el.stopHint.textContent = stopItems.length
     ? ""
-    : "Aucune suggestion (essaye un autre nom).";
+    : t("hint_no_suggestion");
 
   for (const item of stopItems.slice(0, 12)) {
     const li = document.createElement("li");
@@ -253,7 +362,11 @@ function updateValidateSection() {
   show(el.validateSection, ready);
   if (!ready) return;
 
-  el.summary.textContent = `Arrêt: ${draft.stopLabel || draft.stopName} — Ligne: ${draft.lineCode} — Sens: ${draft.direction}`;
+  el.summary.textContent = t("summary_template", {
+    stop: draft.stopLabel || draft.stopName,
+    line: draft.lineCode,
+    direction: draft.direction,
+  });
 }
 
 function resetAfterStopPick() {
@@ -306,7 +419,7 @@ async function ensureStopsCacheLoaded() {
     // Ancien format: stopNames ["..."] -> on ignore pour migrer vers arret_point
   }
 
-  setStatus("Chargement des arrêts (bus)…");
+  setStatus(t("status_loading_stops"));
 
   // Pagination simple par offset
   const limit = 2000;
@@ -511,7 +624,7 @@ async function onPickStop(stopItem) {
   el.stopSearch.value = label;
 
   resetAfterStopPick();
-  setStatus("Chargement des lignes…");
+  setStatus(t("status_loading_lines"));
 
   let lines = [];
   try {
@@ -532,14 +645,14 @@ async function onPickStop(stopItem) {
       ).filter(isRegularBusLineCode);
     } catch (e) {
       console.error(e);
-      setStatus("Erreur réseau pendant le chargement des lignes.");
+      setStatus(t("status_lines_network_error"));
       return;
     }
   }
 
   show(el.lineSection, true);
   renderLineChoices(lines);
-  setStatus(lines.length ? "" : "Aucune ligne trouvée pour cet arrêt.");
+  setStatus(lines.length ? "" : t("status_no_lines"));
 }
 
 async function onPickLine(lineCode) {
@@ -583,7 +696,7 @@ async function onPickLine(lineCode) {
     clearList(el.directionResults);
     updateValidateSection();
     setStatus(
-      "Pas de sens disponible maintenant (ligne hors service). Réessaie plus tard."
+      t("status_no_directions")
     );
     return;
   }
@@ -609,7 +722,7 @@ async function validateSelection() {
     direction: draft.direction,
   };
 
-  setStatus("Enregistrement…");
+  setStatus(t("status_saving"));
 
   await setInStorage({ [STORAGE_KEYS.selection]: selection });
   await chrome.runtime.sendMessage({ type: "selection:set", selection });
@@ -630,7 +743,7 @@ function applyExistingSelection(selection) {
     lineCode: selection.lineCode,
     direction: selection.direction,
   };
-  el.stopHint.textContent = "Sélection actuelle chargée.";
+  el.stopHint.textContent = t("hint_selection_loaded");
   updateValidateSection();
 }
 
@@ -665,6 +778,10 @@ function onStopInput() {
 async function init() {
   setStatus("");
 
+  await loadPrefs();
+  applyTheme();
+  applyLanguage();
+
   const { [STORAGE_KEYS.selection]: selection } = await getFromStorage([
     STORAGE_KEYS.selection,
   ]);
@@ -676,8 +793,7 @@ async function init() {
     await ensureStopsCacheLoaded();
   } catch (e) {
     console.error(e);
-    el.stopHint.textContent =
-      "Impossible de charger la liste d’arrêts (réseau/permission).";
+    el.stopHint.textContent = t("hint_stops_load_failed");
   }
 
   // Optionnel: sert juste à afficher des badges colorés pour les lignes.
@@ -686,6 +802,22 @@ async function init() {
   } catch (e) {
     console.error(e);
     lineColorsByCode = {};
+  }
+
+  if (el.themeToggle) {
+    el.themeToggle.addEventListener("change", async () => {
+      prefs.theme = el.themeToggle.checked ? "dark" : "light";
+      applyTheme();
+      await savePrefs();
+    });
+  }
+
+  if (el.langToggle) {
+    el.langToggle.addEventListener("change", async () => {
+      prefs.lang = el.langToggle.checked ? "en" : "fr";
+      applyLanguage();
+      await savePrefs();
+    });
   }
 
   el.stopSearch.addEventListener("input", onStopInput);
