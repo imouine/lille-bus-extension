@@ -49,6 +49,9 @@ const el = {
 /** @type {{theme: "light"|"dark", lang: "fr"|"en"}} */
 let prefs = { theme: "light", lang: "fr" };
 
+/** @type {{status: null | {type: "key", key: string, vars?: any} | {type: "text", text: string}, stopHint: null | {type: "key", key: string, vars?: any} | {type: "text", text: string}}} */
+let lastDynamic = { status: null, stopHint: null };
+
 const I18N = {
   fr: {
     label_stop: "Arrêt",
@@ -134,6 +137,25 @@ function applyLanguage() {
 
   // Recalcul des textes dynamiques
   updateValidateSection();
+  refreshDynamicTexts();
+}
+
+function refreshDynamicTexts() {
+  if (lastDynamic.stopHint) {
+    if (lastDynamic.stopHint.type === "key") {
+      el.stopHint.textContent = t(lastDynamic.stopHint.key, lastDynamic.stopHint.vars);
+    } else {
+      el.stopHint.textContent = lastDynamic.stopHint.text;
+    }
+  }
+
+  if (lastDynamic.status) {
+    if (lastDynamic.status.type === "key") {
+      el.status.textContent = t(lastDynamic.status.key, lastDynamic.status.vars);
+    } else {
+      el.status.textContent = lastDynamic.status.text;
+    }
+  }
 }
 
 async function loadPrefs() {
@@ -175,8 +197,26 @@ let stopLiveRecords = [];
 /** @type {Record<string, {bg: string, fg: string}>} */
 let lineColorsByCode = {};
 
-function setStatus(message) {
-  el.status.textContent = message || "";
+function setStatusText(message) {
+  const text = message || "";
+  el.status.textContent = text;
+  lastDynamic.status = text ? { type: "text", text } : null;
+}
+
+function setStatusKey(key, vars) {
+  el.status.textContent = t(key, vars);
+  lastDynamic.status = { type: "key", key, vars };
+}
+
+function setStopHintText(message) {
+  const text = message || "";
+  el.stopHint.textContent = text;
+  lastDynamic.stopHint = text ? { type: "text", text } : null;
+}
+
+function setStopHintKey(key, vars) {
+  el.stopHint.textContent = t(key, vars);
+  lastDynamic.stopHint = { type: "key", key, vars };
 }
 
 function show(element, shouldShow) {
@@ -242,13 +282,12 @@ function renderStopSuggestions(stopItems, query) {
   clearList(el.stopResults);
 
   if (!query || query.trim().length < 2) {
-    el.stopHint.textContent = t("hint_min_letters");
+    setStopHintKey("hint_min_letters");
     return;
   }
 
-  el.stopHint.textContent = stopItems.length
-    ? ""
-    : t("hint_no_suggestion");
+  if (stopItems.length) setStopHintText("");
+  else setStopHintKey("hint_no_suggestion");
 
   for (const item of stopItems.slice(0, 12)) {
     const li = document.createElement("li");
@@ -419,7 +458,7 @@ async function ensureStopsCacheLoaded() {
     // Ancien format: stopNames ["..."] -> on ignore pour migrer vers arret_point
   }
 
-  setStatus(t("status_loading_stops"));
+  setStatusKey("status_loading_stops");
 
   // Pagination simple par offset
   const limit = 2000;
@@ -624,7 +663,7 @@ async function onPickStop(stopItem) {
   el.stopSearch.value = label;
 
   resetAfterStopPick();
-  setStatus(t("status_loading_lines"));
+  setStatusKey("status_loading_lines");
 
   let lines = [];
   try {
@@ -645,14 +684,15 @@ async function onPickStop(stopItem) {
       ).filter(isRegularBusLineCode);
     } catch (e) {
       console.error(e);
-      setStatus(t("status_lines_network_error"));
+      setStatusKey("status_lines_network_error");
       return;
     }
   }
 
   show(el.lineSection, true);
   renderLineChoices(lines);
-  setStatus(lines.length ? "" : t("status_no_lines"));
+  if (lines.length) setStatusText("");
+  else setStatusKey("status_no_lines");
 }
 
 async function onPickLine(lineCode) {
@@ -695,16 +735,14 @@ async function onPickLine(lineCode) {
     show(el.directionSection, false);
     clearList(el.directionResults);
     updateValidateSection();
-    setStatus(
-      t("status_no_directions")
-    );
+    setStatusKey("status_no_directions");
     return;
   }
 
   show(el.directionSection, true);
   renderDirectionChoices(directions);
   updateValidateSection();
-  setStatus("");
+  setStatusText("");
 }
 
 function onPickDirection(direction) {
@@ -722,7 +760,7 @@ async function validateSelection() {
     direction: draft.direction,
   };
 
-  setStatus(t("status_saving"));
+  setStatusKey("status_saving");
 
   await setInStorage({ [STORAGE_KEYS.selection]: selection });
   await chrome.runtime.sendMessage({ type: "selection:set", selection });
@@ -743,7 +781,7 @@ function applyExistingSelection(selection) {
     lineCode: selection.lineCode,
     direction: selection.direction,
   };
-  el.stopHint.textContent = t("hint_selection_loaded");
+  setStopHintKey("hint_selection_loaded");
   updateValidateSection();
 }
 
@@ -776,7 +814,7 @@ function onStopInput() {
 }
 
 async function init() {
-  setStatus("");
+  setStatusText("");
 
   await loadPrefs();
   applyTheme();
@@ -793,7 +831,7 @@ async function init() {
     await ensureStopsCacheLoaded();
   } catch (e) {
     console.error(e);
-    el.stopHint.textContent = t("hint_stops_load_failed");
+    setStopHintKey("hint_stops_load_failed");
   }
 
   // Optionnel: sert juste à afficher des badges colorés pour les lignes.
