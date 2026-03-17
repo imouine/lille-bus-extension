@@ -28,6 +28,17 @@ function cqlQuote(value) {
   return `'${String(value).replaceAll("'", "''")}'`;
 }
 
+/** Supprime les diacritiques pour les filtres CQL : l'API MEL rejette les accents */
+function noAccents(str) {
+  return String(str)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\u0152/g, "OE")
+    .replace(/\u0153/g, "oe")
+    .replace(/\u00c6/g, "AE")
+    .replace(/\u00e6/g, "ae");
+}
+
 function buildUrl(params) {
   const url = new URL(API_URL);
   for (const [key, value] of Object.entries(params)) {
@@ -165,7 +176,7 @@ async function refreshBadge() {
   }
 
   try {
-    const filter = `nom_station=${cqlQuote(selection.stopName)}`;
+    const filter = `nom_station=${cqlQuote(noAccents(selection.stopName).toUpperCase())}`;
     const url = buildUrl({ limit: 200, filter });
     const json = await fetchJson(url);
     const records = Array.isArray(json.records) ? json.records : [];

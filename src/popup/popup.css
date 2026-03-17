@@ -20,6 +20,9 @@
   --hover: rgba(25, 118, 210, 0.08);
   --focus: rgba(25, 118, 210, 0.35);
   --danger: #b91c1c;
+  --selected-bg: rgba(25, 118, 210, 0.12);
+  --selected-border: rgba(25, 118, 210, 0.55);
+  --selected-text: #1565c0;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -33,6 +36,9 @@
     --hover: rgba(25, 118, 210, 0.18);
     --focus: rgba(25, 118, 210, 0.55);
     --danger: #ef4444;
+    --selected-bg: rgba(25, 118, 210, 0.22);
+    --selected-border: rgba(25, 118, 210, 0.7);
+    --selected-text: #90caf9;
   }
 }
 
@@ -49,6 +55,9 @@
   --hover: rgba(25, 118, 210, 0.08);
   --focus: rgba(25, 118, 210, 0.35);
   --danger: #b91c1c;
+  --selected-bg: rgba(25, 118, 210, 0.12);
+  --selected-border: rgba(25, 118, 210, 0.55);
+  --selected-text: #1565c0;
 }
 
 :root[data-theme="dark"] {
@@ -63,6 +72,9 @@
   --hover: rgba(25, 118, 210, 0.18);
   --focus: rgba(25, 118, 210, 0.55);
   --danger: #ef4444;
+  --selected-bg: rgba(25, 118, 210, 0.22);
+  --selected-border: rgba(25, 118, 210, 0.7);
+  --selected-text: #90caf9;
 }
 
 html,
@@ -184,7 +196,33 @@ input:focus {
   border-color: rgba(25, 118, 210, 0.8);
 }
 
-/* Lignes: afficher un badge coloré (style “logo”) */
+/* Élément sélectionné dans les listes arrêt / ligne / sens */
+.list button.selected {
+  background: var(--selected-bg);
+  border-color: var(--selected-border);
+  color: var(--selected-text);
+  font-weight: 600;
+  position: relative;
+  padding-right: 32px;
+}
+
+.list button.selected::after {
+  content: "✓";
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+  color: var(--selected-border);
+  font-weight: 700;
+}
+
+/* Pour les boutons de ligne : le ✓ ne doit pas chevaucher le pill */
+#lineResults .list button.selected {
+  justify-content: space-between;
+}
+
+/* Lignes: afficher un badge coloré (style "logo") */
 #lineResults button.lineOption {
   display: flex;
   align-items: center;
