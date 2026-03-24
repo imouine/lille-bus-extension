@@ -24,5 +24,11 @@
   "background": {
     "service_worker": "background/service-worker.js"
   },
-  "options_page": "options/options.html"
+  "options_page": "options/options.html",
+  "web_accessible_resources": [
+    {
+      "resources": ["data/schedules.json"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }
