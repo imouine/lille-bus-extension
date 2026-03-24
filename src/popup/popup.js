@@ -46,8 +46,7 @@ const el = {
   summary: document.getElementById("summary"),
   validateBtn: document.getElementById("validateBtn"),
   status: document.getElementById("status"),
-  themeToggle: document.getElementById("themeToggle"),
-  langToggle: document.getElementById("langToggle"),
+  openOptionsBtn: document.getElementById("openOptionsBtn"),
 };
 
 /** @type {{theme: "light"|"dark", lang: "fr"|"en"}} */
@@ -63,9 +62,7 @@ const I18N = {
     title_line: "Ligne",
     title_direction: "Sens",
     btn_validate: "Valider",
-    title_preferences: "Préférences",
-    toggle_theme: "Mode nuit",
-    toggle_lang: "English",
+    btn_settings: "Préférences",
 
     hint_min_letters: "Tape au moins 2 lettres.",
     hint_no_suggestion: "Aucune suggestion (essaye un autre nom).",
@@ -85,9 +82,7 @@ const I18N = {
     title_line: "Line",
     title_direction: "Direction",
     btn_validate: "Save",
-    title_preferences: "Preferences",
-    toggle_theme: "Night mode",
-    toggle_lang: "Français",
+    btn_settings: "Preferences",
 
     hint_min_letters: "Type at least 2 letters.",
     hint_no_suggestion: "No suggestions (try another name).",
@@ -116,12 +111,10 @@ function t(key, vars) {
 
 function applyTheme() {
   document.documentElement.dataset.theme = prefs.theme;
-  if (el.themeToggle) el.themeToggle.checked = prefs.theme === "dark";
 }
 
 function applyLanguage() {
   document.documentElement.lang = prefs.lang;
-  if (el.langToggle) el.langToggle.checked = prefs.lang === "en";
 
   // textContent
   for (const node of document.querySelectorAll("[data-i18n]")) {
@@ -984,19 +977,9 @@ async function init() {
     lineColorsByCode = {};
   }
 
-  if (el.themeToggle) {
-    el.themeToggle.addEventListener("change", async () => {
-      prefs.theme = el.themeToggle.checked ? "dark" : "light";
-      applyTheme();
-      await savePrefs();
-    });
-  }
-
-  if (el.langToggle) {
-    el.langToggle.addEventListener("change", async () => {
-      prefs.lang = el.langToggle.checked ? "en" : "fr";
-      applyLanguage();
-      await savePrefs();
+  if (el.openOptionsBtn) {
+    el.openOptionsBtn.addEventListener("click", () => {
+      chrome.runtime.openOptionsPage();
     });
   }
 

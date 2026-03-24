@@ -5,12 +5,196 @@
  * License: GPL-3.0
  * https://github.com/imouine/lille-bus-extension
  */
- 
- body {
-  font-family: Arial, sans-serif;
-  margin: 24px;
+
+:root {
+  color-scheme: light dark;
+  --accent: #1976d2;
+  --bg: #ffffff;
+  --surface: #f7f8fa;
+  --text: #0f172a;
+  --muted: rgba(15, 23, 42, 0.56);
+  --border: rgba(15, 23, 42, 0.12);
+  --border-strong: rgba(15, 23, 42, 0.22);
+  --focus: rgba(25, 118, 210, 0.35);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b1220;
+    --surface: rgba(255, 255, 255, 0.06);
+    --text: rgba(255, 255, 255, 0.92);
+    --muted: rgba(255, 255, 255, 0.55);
+    --border: rgba(255, 255, 255, 0.10);
+    --border-strong: rgba(255, 255, 255, 0.22);
+    --focus: rgba(25, 118, 210, 0.55);
+  }
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #ffffff;
+  --surface: #f7f8fa;
+  --text: #0f172a;
+  --muted: rgba(15, 23, 42, 0.56);
+  --border: rgba(15, 23, 42, 0.12);
+  --border-strong: rgba(15, 23, 42, 0.22);
+  --focus: rgba(25, 118, 210, 0.35);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b1220;
+  --surface: rgba(255, 255, 255, 0.06);
+  --text: rgba(255, 255, 255, 0.92);
+  --muted: rgba(255, 255, 255, 0.55);
+  --border: rgba(255, 255, 255, 0.10);
+  --border-strong: rgba(255, 255, 255, 0.22);
+  --focus: rgba(25, 118, 210, 0.55);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+body {
+  padding: 32px 20px;
 }
 
 main {
-  max-width: 640px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+header {
+  margin-bottom: 28px;
+}
+
+h1 {
+  margin: 0 0 2px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.sectionTitle {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+/* Toggle row */
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid var(--border);
+}
+
+.toggleRow:last-child {
+  border-bottom: none;
+  padding-bottom: 2px;
+}
+
+.toggleText {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.toggleInput {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.toggleSwitch {
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.14);
+  border: 1px solid var(--border-strong);
+  position: relative;
+  flex: 0 0 auto;
+  transition: background 120ms ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  .toggleSwitch {
+    background: rgba(255, 255, 255, 0.14);
+  }
+}
+
+:root[data-theme="dark"] .toggleSwitch {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.toggleSwitch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
+  transition: transform 140ms ease;
+}
+
+.toggleRow:focus-within .toggleSwitch {
+  box-shadow: 0 0 0 3px var(--focus);
+}
+
+.toggleInput:checked + .toggleSwitch {
+  background: rgba(25, 118, 210, 0.35);
+  border-color: rgba(25, 118, 210, 0.5);
+}
+
+.toggleInput:checked + .toggleSwitch::after {
+  transform: translateX(20px);
+}
+
+/* Message de confirmation */
+.saved {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+  min-height: 20px;
+  transition: opacity 300ms;
+  opacity: 0;
+}
+
+.saved.visible {
+  opacity: 1;
 }

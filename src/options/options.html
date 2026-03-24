@@ -7,17 +7,37 @@
 -->
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Lille Bus Extension - Options</title>
+    <title>Lille Bus — Préférences</title>
     <link rel="stylesheet" href="options.css" />
   </head>
   <body>
     <main>
-      <h1>Lille Bus Extension</h1>
-      <p>Configuration page coming soon.</p>
+      <header>
+        <h1>Lille Bus</h1>
+        <p class="subtitle" id="subtitle">Préférences</p>
+      </header>
+
+      <section>
+        <div class="sectionTitle" id="label_appearance">Apparence</div>
+
+        <label class="toggleRow">
+          <span class="toggleText" id="label_theme">Mode nuit</span>
+          <input id="themeToggle" class="toggleInput" type="checkbox" />
+          <span class="toggleSwitch" aria-hidden="true"></span>
+        </label>
+
+        <label class="toggleRow">
+          <span class="toggleText" id="label_lang">English</span>
+          <input id="langToggle" class="toggleInput" type="checkbox" />
+          <span class="toggleSwitch" aria-hidden="true"></span>
+        </label>
+      </section>
+
+      <p class="saved" id="savedMsg"></p>
     </main>
 
     <script src="options.js"></script>
