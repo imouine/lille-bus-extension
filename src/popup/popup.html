@@ -42,10 +42,21 @@
 
       <section id="validateSection" class="hidden" aria-label="Validation">
         <div id="summary" class="summary"></div>
-        <button id="validateBtn" type="button" data-i18n="btn_validate">Valider</button>
+        <div class="validateRow">
+          <button id="addWatcherBtn" type="button" data-i18n="btn_add">+ Ajouter</button>
+          <button id="validateBtn"   type="button" data-i18n="btn_validate">Valider</button>
+        </div>
       </section>
 
       <div id="status" class="status" role="status" aria-live="polite"></div>
+
+      <!-- Liste des combinaisons surveillées -->
+      <section id="watchersSection" class="hidden" aria-label="Combinaisons surveillées">
+        <div class="watchersHeader">
+          <span class="sectionTitle" id="label_watchers">Surveillés</span>
+        </div>
+        <ul id="watchersList" class="watchersList"></ul>
+      </section>
 
       <div class="settingsRow">
         <button id="pauseBtn" class="settingsBtn pauseBtn" type="button" aria-label="Pause refresh" aria-pressed="false">

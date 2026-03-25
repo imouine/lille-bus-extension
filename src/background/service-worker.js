@@ -22,9 +22,11 @@ const API_URL =
   "https://data.lillemetropole.fr/data/ogcapi/collections/ilevia%3Aprochains_passages/items?f=json";
 
 const STORAGE_KEYS = {
-  selection: "selection",
-  prefs:     "prefs",
-  paused:    "paused",
+  selection:      "selection",
+  prefs:          "prefs",
+  paused:         "paused",
+  watchers:       "watchers",
+  watcherResults: "watcherResults", // résultats par watcher, lus par la popup
 };
 
 /** État de pause — mis en cache pour éviter un storage.get à chaque tick */
@@ -422,70 +424,94 @@ function directionMatches(sens, gtfsDir) {
   );
 }
 
+async function fetchBestMinutes(watcherList) {
+  if (!watcherList || watcherList.length === 0) return { best: null, isLive: false, perWatcher: [] };
+
+  const perWatcher = await Promise.all(watcherList.map(async (w) => {
+    try {
+      const nameNorm = noAccents(w.stopName).toUpperCase();
+      const filter   = `nom_station LIKE ${cqlQuote("%" + nameNorm)}`;
+      const url      = buildUrl({ limit: 200, filter });
+      const json     = await fetchJson(url);
+      const records  = Array.isArray(json.records) ? json.records : [];
+      const matches  = records.filter(
+        (r) => r &&
+          r.code_ligne === w.lineCode &&
+          directionMatches(r.sens_ligne, w.direction) &&
+          (typeof r.heure_estimee_depart === "string" || typeof r.cle_tri === "string")
+      );
+      let best = null;
+      for (const r of matches) {
+        const m = minutesUntilFromRecord(r);
+        if (m !== null && (best === null || m < best)) best = m;
+      }
+      if (best !== null) return { minutes: best, isLive: true };
+    } catch (_) { /* réseau indisponible */ }
+
+    // Fallback théorique pour ce watcher
+    const theo = await nextTheoreticalMinutes(w.stopName, w.lineCode, w.direction).catch(() => null);
+    return { minutes: theo, isLive: false };
+  }));
+
+  // Meilleur live global
+  let bestLive = null;
+  for (const r of perWatcher) {
+    if (r.isLive && r.minutes !== null && (bestLive === null || r.minutes < bestLive)) bestLive = r.minutes;
+  }
+  if (bestLive !== null) return { best: bestLive, isLive: true, perWatcher };
+
+  // Meilleur théorique global
+  let bestTheo = null;
+  for (const r of perWatcher) {
+    if (!r.isLive && r.minutes !== null && (bestTheo === null || r.minutes < bestTheo)) bestTheo = r.minutes;
+  }
+  return { best: bestTheo, isLive: false, perWatcher };
+}
+
 async function refreshBadge() {
   if (_isPaused) {
     await applyPausedBadge();
     return;
   }
 
-  const { [STORAGE_KEYS.selection]: selection } = await chrome.storage.local.get(
-    [STORAGE_KEYS.selection]
-  );
+  const stored = await chrome.storage.local.get([STORAGE_KEYS.watchers, STORAGE_KEYS.selection]);
+  let watcherList = Array.isArray(stored[STORAGE_KEYS.watchers]) ? stored[STORAGE_KEYS.watchers] : null;
 
-  if (!selection || !selection.stopName || !selection.lineCode || !selection.direction) {
+  // Migration / compatibilité : seulement si la clé watchers n'existe pas du tout
+  if (watcherList === null) {
+    const sel = stored[STORAGE_KEYS.selection];
+    if (sel?.stopName && sel?.lineCode && sel?.direction) {
+      watcherList = [{ stopName: sel.stopName, lineCode: sel.lineCode, direction: sel.direction }];
+    } else {
+      watcherList = [];
+    }
+  }
+
+  if (watcherList.length === 0) {
     _isLive = false;
     _lastLiveMinutes = null;
+    await chrome.storage.local.set({ [STORAGE_KEYS.watcherResults]: [] });
     await setBadge("…");
     return;
   }
 
   try {
-    const nameNorm = noAccents(selection.stopName).toUpperCase();
-    const filter = `nom_station LIKE ${cqlQuote("%" + nameNorm)}`;
-    const url = buildUrl({ limit: 200, filter });
-    const json = await fetchJson(url);
-    const records = Array.isArray(json.records) ? json.records : [];
+    const { best, isLive, perWatcher } = await fetchBestMinutes(watcherList);
 
-    const matches = records.filter(
-      (r) =>
-        r &&
-        r.code_ligne === selection.lineCode &&
-        directionMatches(r.sens_ligne, selection.direction) &&
-        (typeof r.heure_estimee_depart === "string" || typeof r.cle_tri === "string")
-    );
+    // Persiste les résultats individuels pour la popup
+    await chrome.storage.local.set({ [STORAGE_KEYS.watcherResults]: perWatcher });
 
-    let best = null;
-    for (const r of matches) {
-      const m = minutesUntilFromRecord(r);
-      if (m === null) continue;
-      if (best === null || m < best) best = m;
-    }
-
-    if (best === null) {
-      // Fallback théorique — pas d'animation
+    if (!isLive || best === null) {
       _isLive = false;
       _lastLiveMinutes = null;
-      const theoretical = await nextTheoreticalMinutes(
-        selection.stopName,
-        selection.lineCode,
-        selection.direction
-      );
-      if (theoretical !== null) {
-        await chrome.action.setBadgeBackgroundColor({ color: "#757575" });
-        await setBadge(theoretical > 99 ? "99+" : String(theoretical));
-      } else {
-        await chrome.action.setBadgeBackgroundColor({ color: "#757575" });
-        await setBadge("--");
-      }
+      await chrome.action.setBadgeBackgroundColor({ color: "#757575" });
+      await setBadge(best !== null ? (best > 99 ? "99+" : String(best)) : "--");
       return;
     }
 
-    // Données live — active/met à jour le battement
     _lastLiveMinutes = best;
     _isLive = true;
-    _beatPhase = 0; // repart du début du cycle à chaque refresh
-
-    // Couleur de base immédiate (le beat loop prend ensuite le relais)
+    _beatPhase = 0;
     await chrome.action.setBadgeBackgroundColor({ color: colorToHex(badgeColor(best)) });
     await setBadge(best > 99 ? "99+" : String(best));
   } catch (e) {
@@ -502,6 +528,28 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (!message || typeof message !== "object") return;
+
+  if (message.type === "watchers:set" && Array.isArray(message.watchers)) {
+    const list = message.watchers;
+    if (list.length === 0) {
+      // Plus aucun watcher : on nettoie tout
+      _isLive = false;
+      _lastLiveMinutes = null;
+      chrome.storage.local
+        .set({ [STORAGE_KEYS.watchers]: [], [STORAGE_KEYS.watcherResults]: [] })
+        .then(() => chrome.action.setBadgeBackgroundColor({ color: "#757575" }))
+        .then(() => chrome.action.setBadgeText({ text: "…" }))
+        .then(() => sendResponse({ ok: true }))
+        .catch((e) => sendResponse({ ok: false, error: String(e) }));
+    } else {
+      chrome.storage.local
+        .set({ [STORAGE_KEYS.watchers]: list })
+        .then(() => refreshBadge())
+        .then(() => sendResponse({ ok: true }))
+        .catch((e) => sendResponse({ ok: false, error: String(e) }));
+    }
+    return true;
+  }
 
   if (message.type === "selection:set" && message.selection) {
     chrome.storage.local

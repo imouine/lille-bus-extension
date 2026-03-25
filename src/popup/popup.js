@@ -19,10 +19,12 @@ const LINE_COLORS_API_URL =
   "https://data.lillemetropole.fr/data/ogcapi/collections/ilevia%3Acouleurs_lignes/items?f=json";
 
 const STORAGE_KEYS = {
-  selection:      "selection",
-  lineColorsCache:"lineColorsCache",
-  prefs:          "prefs",
-  paused:         "paused",
+  selection:       "selection",
+  lineColorsCache: "lineColorsCache",
+  prefs:           "prefs",
+  paused:          "paused",
+  watchers:        "watchers",
+  watcherResults:  "watcherResults",
 };
 
 // --- DOM ----------------------------------------------------------------------
@@ -38,6 +40,9 @@ const el = {
   validateSection:  document.getElementById("validateSection"),
   summary:          document.getElementById("summary"),
   validateBtn:      document.getElementById("validateBtn"),
+  addWatcherBtn:    document.getElementById("addWatcherBtn"),
+  watchersSection:  document.getElementById("watchersSection"),
+  watchersList:     document.getElementById("watchersList"),
   status:           document.getElementById("status"),
   openOptionsBtn:   document.getElementById("openOptionsBtn"),
   pauseBtn:         document.getElementById("pauseBtn"),
@@ -55,9 +60,11 @@ const I18N = {
     title_line:            "Ligne",
     title_direction:       "Sens",
     btn_validate:          "Valider",
+    btn_add:               "+ Ajouter",
     btn_settings:          "Préférences",
     btn_pause:             "Pause",
     btn_resume:            "Reprendre",
+    label_watchers:        "Surveillés",
     hint_min_letters:      "Tape au moins 2 lettres.",
     hint_no_suggestion:    "Aucune suggestion.",
     hint_selection_loaded: "Sélection actuelle chargée.",
@@ -65,8 +72,10 @@ const I18N = {
     status_loading:        "Calcul en cours…",
     summary_template:      "Arrêt : {stop} — Ligne : {line} — Sens : {direction}",
     next_live:             "Prochain bus dans {min} min",
+    next_best:             "Meilleur : {min} min (live)",
     next_theoretical:      "~{min} min (horaire théorique)",
     no_next:               "Aucun prochain passage trouvé.",
+    status_paused:         "Actualisation en pause",
   },
   en: {
     label_stop:            "Stop",
@@ -74,9 +83,11 @@ const I18N = {
     title_line:            "Line",
     title_direction:       "Direction",
     btn_validate:          "Save",
+    btn_add:               "+ Add",
     btn_settings:          "Preferences",
     btn_pause:             "Pause",
     btn_resume:            "Resume",
+    label_watchers:        "Watching",
     hint_min_letters:      "Type at least 2 letters.",
     hint_no_suggestion:    "No suggestions.",
     hint_selection_loaded: "Current selection loaded.",
@@ -84,8 +95,10 @@ const I18N = {
     status_loading:        "Calculating…",
     summary_template:      "Stop: {stop} — Line: {line} — Dir: {direction}",
     next_live:             "Next bus in {min} min",
+    next_best:             "Best: {min} min (live)",
     next_theoretical:      "~{min} min (scheduled)",
     no_next:               "No upcoming departure found.",
+    status_paused:         "Refresh paused",
   },
 };
 
@@ -366,15 +379,118 @@ async function loadLineColors() {
 
 // --- Etat ---------------------------------------------------------------------
 
-let draft = { stopNorm: null, lineCode: null, direction: null };
-/** @type {Array<{norm: string, searchNorm: string}>} */
+let draft    = { stopNorm: null, lineCode: null, direction: null };
 let allStops = [];
+let watchers = [];
+let isPaused = false; // miroir de l'état pause, accessible partout
 
 // --- Helpers UI ---------------------------------------------------------------
 
 function show(elem, v) { elem.classList.toggle("hidden", !v); }
-
 function setStatus(text) { el.status.textContent = text || ""; }
+
+async function saveWatchers() {
+  await chrome.storage.local.set({ [STORAGE_KEYS.watchers]: watchers });
+  if (watchers.length === 0) {
+    // Nettoie aussi la selection legacy pour éviter la résurrection au prochain chargement
+    await chrome.storage.local.remove([STORAGE_KEYS.selection]);
+  }
+  await chrome.runtime.sendMessage({ type: "watchers:set", watchers }).catch(() => {});
+}
+
+/** Retourne l'urgence CSS d'un nombre de minutes live ou théorique */
+function timeUrgency(minutes, isLive) {
+  if (!isLive) return "theoretical";
+  if (minutes <= 1) return "now";
+  if (minutes <= 5) return "soon";
+  return "normal";
+}
+
+/** Crée ou met à jour le badge temps d'un watcher */
+function setWatcherTimeBadge(badge, minutes, isLive) {
+  if (minutes === null) {
+    badge.removeAttribute("data-urgency");
+    badge.innerHTML = `<span>—</span>`;
+    return;
+  }
+  badge.dataset.urgency = timeUrgency(minutes, isLive);
+  badge.innerHTML =
+    `${minutes}<span class="watcherTimeUnit"> min</span>`;
+}
+
+async function renderWatchers() {
+  el.watchersList.innerHTML = "";
+  show(el.watchersSection, watchers.length > 0);
+  if (watchers.length === 0) return;
+
+  // Lit les résultats déjà calculés par le service worker (0 appel API)
+  const { [STORAGE_KEYS.watcherResults]: stored } =
+    await chrome.storage.local.get([STORAGE_KEYS.watcherResults]);
+  const results = Array.isArray(stored) ? stored : [];
+
+  for (let i = 0; i < watchers.length; i++) {
+    const w  = watchers[i];
+    const li = document.createElement("li");
+    li.className = "watcherItem";
+
+    // Col 1 — pill ligne
+    const pill = document.createElement("span");
+    pill.className = "linePill watcherPill";
+    pill.textContent = w.lineCode;
+    const colors = lineColors[w.lineCode.toUpperCase()];
+    if (colors?.bg) pill.style.backgroundColor = colors.bg;
+    if (colors?.fg) pill.style.color           = colors.fg;
+    li.appendChild(pill);
+
+    // Col 2 — arrêt + direction
+    const stopEl = document.createElement("span");
+    stopEl.className   = "watcherStop";
+    stopEl.textContent = toDisplayName(w.stopName);
+    stopEl.title       = toDisplayName(w.stopName);
+    li.appendChild(stopEl);
+
+    const dirEl = document.createElement("span");
+    dirEl.className   = "watcherDir";
+    dirEl.textContent = `→ ${w.direction}`;
+    dirEl.title       = w.direction;
+    li.appendChild(dirEl);
+
+    // Col 3 — badge temps + bouton ×
+    const right = document.createElement("div");
+    right.className = "watcherRight";
+
+    const timeBadge = document.createElement("span");
+    timeBadge.className = "watcherTime";
+    if (isPaused) {
+      timeBadge.dataset.urgency = "theoretical";
+      timeBadge.innerHTML = `<span>II</span>`;
+    } else {
+      const res = results[i] ?? null;
+      if (res) {
+        setWatcherTimeBadge(timeBadge, res.minutes, res.isLive);
+      } else {
+        timeBadge.innerHTML = `<span>…</span>`;
+      }
+    }
+    right.appendChild(timeBadge);
+
+    const rm = document.createElement("button");
+    rm.className   = "watcherRemove";
+    rm.type        = "button";
+    rm.textContent = "×";
+    rm.setAttribute("aria-label", "Supprimer");
+    rm.addEventListener("click", async () => {
+      watchers.splice(i, 1);
+      await saveWatchers();
+      await renderWatchers();
+      await showNextMinutes();
+    });
+    right.appendChild(rm);
+    li.appendChild(right);
+
+    el.watchersList.appendChild(li);
+  }
+}
 
 function normalizeForSearch(s) {
   return String(s).normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
@@ -479,21 +595,42 @@ function updateSummary() {
 // --- Affichage des minutes ----------------------------------------------------
 
 async function showNextMinutes() {
-  if (!draft.stopNorm || !draft.lineCode || !draft.direction) return;
-  setStatus(t("status_loading"));
-
-  let liveMin = null;
-  try {
-    liveMin = await fetchLiveMinutes(draft.stopNorm, draft.lineCode, draft.direction);
-  } catch (_) { /* réseau indisponible -> fallback */ }
-
-  if (liveMin !== null) {
-    setStatus(t("next_live", { min: liveMin }));
+  if (watchers.length === 0 && !(draft.stopNorm && draft.lineCode && draft.direction)) {
+    setStatus("");
     return;
   }
 
-  const thMin = await nextTheoreticalMinutes(draft.stopNorm, draft.lineCode, draft.direction);
-  setStatus(thMin !== null ? t("next_theoretical", { min: thMin }) : t("no_next"));
+  if (isPaused) {
+    setStatus(t("status_paused"));
+    return;
+  }
+
+  // Lit les résultats déjà calculés par le service worker (0 appel API)
+  const { [STORAGE_KEYS.watcherResults]: stored } =
+    await chrome.storage.local.get([STORAGE_KEYS.watcherResults]);
+  const results = Array.isArray(stored) ? stored : [];
+
+  // Meilleur live parmi les watchers
+  let bestLive = null;
+  for (const r of results) {
+    if (r?.isLive && r.minutes !== null && (bestLive === null || r.minutes < bestLive)) {
+      bestLive = r.minutes;
+    }
+  }
+  if (bestLive !== null) {
+    const key = results.length > 1 ? "next_best" : "next_live";
+    setStatus(t(key, { min: bestLive }));
+    return;
+  }
+
+  // Meilleur théorique parmi les watchers
+  let bestTheo = null;
+  for (const r of results) {
+    if (!r?.isLive && r?.minutes !== null && (bestTheo === null || r.minutes < bestTheo)) {
+      bestTheo = r.minutes;
+    }
+  }
+  setStatus(bestTheo !== null ? t("next_theoretical", { min: bestTheo }) : t("no_next"));
 }
 
 // --- Handlers -----------------------------------------------------------------
@@ -592,17 +729,38 @@ async function onPickDirection(direction) {
 
 // --- Validation ---------------------------------------------------------------
 
+async function addWatcher() {
+  if (!draft.stopNorm || !draft.lineCode || !draft.direction) return;
+  const w = { stopName: draft.stopNorm, lineCode: draft.lineCode, direction: draft.direction };
+  // Évite les doublons
+  const exists = watchers.some(
+    (x) => x.stopName === w.stopName && x.lineCode === w.lineCode && x.direction === w.direction
+  );
+  if (!exists) {
+    watchers.push(w);
+    await renderWatchers();
+    await saveWatchers();
+  }
+  // Réinitialise le draft pour permettre d'en ajouter un autre
+  draft = { stopNorm: null, lineCode: null, direction: null };
+  el.stopSearch.value = "";
+  el.stopHint.textContent = "";
+  el.stopResults.innerHTML = "";
+  show(el.lineSection, false);
+  show(el.directionSection, false);
+  show(el.validateSection, false);
+  el.lineResults.innerHTML = "";
+  el.directionResults.innerHTML = "";
+  setStatus("");
+  await showNextMinutes();
+}
+
 async function validateSelection() {
   if (!draft.stopNorm || !draft.lineCode || !draft.direction) return;
-  const selection = {
-    stopName:  draft.stopNorm,
-    stopLabel: toDisplayName(draft.stopNorm),
-    lineCode:  draft.lineCode,
-    direction: draft.direction,
-  };
+  // "Valider" = remplace tout par ce seul watcher
+  watchers = [{ stopName: draft.stopNorm, lineCode: draft.lineCode, direction: draft.direction }];
   setStatus(t("status_saving"));
-  await chrome.storage.local.set({ [STORAGE_KEYS.selection]: selection });
-  await chrome.runtime.sendMessage({ type: "selection:set", selection });
+  await saveWatchers();
   window.close();
 }
 
@@ -645,39 +803,69 @@ async function init() {
 
   allStops = stopNames.map((norm) => ({ norm, searchNorm: normalizeForSearch(norm) }));
 
-  const { [STORAGE_KEYS.selection]: sel } =
-    await chrome.storage.local.get([STORAGE_KEYS.selection]);
-  if (sel && sel.stopName && sel.lineCode && sel.direction) {
-    draft = { stopNorm: sel.stopName, lineCode: sel.lineCode, direction: sel.direction };
-    el.stopSearch.value = toDisplayName(sel.stopName);
-    el.stopHint.textContent = t("hint_selection_loaded");
-    updateSummary();
-    showNextMinutes();
+  // Charge les watchers (nouveau format) ou migration one-shot depuis l'ancien format selection
+  const stored = await chrome.storage.local.get([STORAGE_KEYS.watchers, STORAGE_KEYS.selection, STORAGE_KEYS.paused]);
+  if (Array.isArray(stored[STORAGE_KEYS.watchers])) {
+    // La clé existe (même tableau vide) : on respecte l'état sauvegardé, pas de migration
+    watchers = stored[STORAGE_KEYS.watchers];
+  } else if (stored[STORAGE_KEYS.selection]?.stopName) {
+    // La clé watchers n'a jamais existé → migration one-shot
+    const sel = stored[STORAGE_KEYS.selection];
+    watchers = [{ stopName: sel.stopName, lineCode: sel.lineCode, direction: sel.direction }];
+    await chrome.storage.local.set({ [STORAGE_KEYS.watchers]: watchers });
   }
+  // Initialise isPaused avant le premier rendu
+  isPaused = stored[STORAGE_KEYS.paused] === true;
+
+  await renderWatchers();
+  if (watchers.length > 0) showNextMinutes();
+
+  // --- Auto-refresh de la popup ---
+  // Délègue entièrement au service worker : envoie badge:refresh,
+  // puis lit watcherResults depuis le storage. Zéro fetch dupliqué.
+  const REFRESH_STEPS_MS   = [5000, 10000, 15000, 30000, 60000];
+  const DEFAULT_REFRESH_MS = 30000;
+  const { [STORAGE_KEYS.prefs]: prefsStored } =
+    await chrome.storage.local.get([STORAGE_KEYS.prefs]);
+  const refreshIdx = prefsStored?.refreshIdx;
+  const intervalMs = (Number.isInteger(refreshIdx) && refreshIdx >= 0 && refreshIdx < REFRESH_STEPS_MS.length)
+    ? REFRESH_STEPS_MS[refreshIdx]
+    : DEFAULT_REFRESH_MS;
+
+  const popupRefreshTimer = setInterval(async () => {
+    if (watchers.length === 0 || isPaused) return;
+    await chrome.runtime.sendMessage({ type: "badge:refresh" }).catch(() => {});
+    await renderWatchers();
+    await showNextMinutes();
+  }, intervalMs);
+
+  window.addEventListener("unload", () => clearInterval(popupRefreshTimer));
 
   el.stopSearch.addEventListener("input", onStopInput);
   el.validateBtn.addEventListener("click", validateSelection);
+  el.addWatcherBtn.addEventListener("click", addWatcher);
   if (el.openOptionsBtn) {
     el.openOptionsBtn.addEventListener("click", () => chrome.runtime.openOptionsPage());
   }
 
   // --- Bouton pause/play ---
-  const { [STORAGE_KEYS.paused]: pausedVal } =
-    await chrome.storage.local.get([STORAGE_KEYS.paused]);
-  let paused = pausedVal === true;
+  // isPaused est déjà initialisé dans le stored groupé ci-dessus
 
   function applyPauseUI() {
-    el.pauseBtn.setAttribute("aria-pressed", String(paused));
-    el.pauseBtn.setAttribute("aria-label", t(paused ? "btn_resume" : "btn_pause"));
-    el.pauseBtnLabel.textContent = t(paused ? "btn_resume" : "btn_pause");
+    el.pauseBtn.setAttribute("aria-pressed", String(isPaused));
+    el.pauseBtn.setAttribute("aria-label", t(isPaused ? "btn_resume" : "btn_pause"));
+    el.pauseBtnLabel.textContent = t(isPaused ? "btn_resume" : "btn_pause");
   }
 
   applyPauseUI();
 
   el.pauseBtn.addEventListener("click", async () => {
-    paused = !paused;
+    isPaused = !isPaused;
     applyPauseUI();
-    await chrome.runtime.sendMessage({ type: "badge:pause", paused });
+    await chrome.runtime.sendMessage({ type: "badge:pause", paused: isPaused });
+    // Met à jour la popup immédiatement sans attendre l'intervalle
+    await renderWatchers();
+    await showNextMinutes();
   });
 }
 
