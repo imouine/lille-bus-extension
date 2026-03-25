@@ -429,17 +429,44 @@ async function fetchBestMinutes(watcherList) {
 
   const perWatcher = await Promise.all(watcherList.map(async (w) => {
     try {
-      const nameNorm = noAccents(w.stopName).toUpperCase();
-      const filter   = `nom_station LIKE ${cqlQuote("%" + nameNorm)}`;
+      let filter;
+      const stopIds = Array.isArray(w.stopIds) && w.stopIds.length > 0 ? w.stopIds : null;
+
+      if (stopIds) {
+        // Matching fiable par identifiant_station
+        // Format API : ILEVIA:StopPoint:BP:{stop_id}:LOC
+        const fullIds = stopIds.map((id) => `ILEVIA:StopPoint:BP:${id}:LOC`);
+        const inList = fullIds.map(cqlQuote).join(",");
+        filter = `identifiant_station IN (${inList})`;
+      } else {
+        // Fallback ancien matching par nom_station + fuzzy sens_ligne
+        const nameNorm = noAccents(w.stopName).toUpperCase();
+        filter = `nom_station LIKE ${cqlQuote("%" + nameNorm)}`;
+      }
+
       const url      = buildUrl({ limit: 200, filter });
       const json     = await fetchJson(url);
       const records  = Array.isArray(json.records) ? json.records : [];
-      const matches  = records.filter(
-        (r) => r &&
-          r.code_ligne === w.lineCode &&
-          directionMatches(r.sens_ligne, w.direction) &&
-          (typeof r.heure_estimee_depart === "string" || typeof r.cle_tri === "string")
-      );
+
+      let matches;
+      if (stopIds) {
+        // Avec stopIds, on sait que identifiant_station est déjà filtré —
+        // on vérifie juste code_ligne par sécurité
+        matches = records.filter(
+          (r) => r &&
+            r.code_ligne === w.lineCode &&
+            (typeof r.heure_estimee_depart === "string" || typeof r.cle_tri === "string")
+        );
+      } else {
+        // Ancien fallback : fuzzy match sur sens_ligne
+        matches = records.filter(
+          (r) => r &&
+            r.code_ligne === w.lineCode &&
+            directionMatches(r.sens_ligne, w.direction) &&
+            (typeof r.heure_estimee_depart === "string" || typeof r.cle_tri === "string")
+        );
+      }
+
       let best = null;
       for (const r of matches) {
         const m = minutesUntilFromRecord(r);

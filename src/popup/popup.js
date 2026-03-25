@@ -182,6 +182,13 @@ async function getDirections(stopNorm, lineCode) {
   return Object.keys(lineEntry).sort((a, b) => a.localeCompare(b, "fr"));
 }
 
+/** Retourne les stop_id GTFS pour une combinaison (arrêt, ligne, direction). */
+async function getStopIds(stopNorm, lineCode, direction) {
+  const data = await loadSchedules();
+  if (!data?.stops) return [];
+  return data.stops[stopNorm]?.[lineCode]?.[direction]?._stopIds ?? [];
+}
+
 async function nextTheoreticalMinutes(stopNorm, lineCode, direction) {
   const data = await loadSchedules();
   if (!data || !data.stops) return null;
@@ -715,7 +722,8 @@ async function onPickDirection(direction) {
 
 async function addWatcher() {
   if (!draft.stopNorm || !draft.lineCode || !draft.direction) return;
-  const w = { stopName: draft.stopNorm, lineCode: draft.lineCode, direction: draft.direction };
+  const stopIds = await getStopIds(draft.stopNorm, draft.lineCode, draft.direction);
+  const w = { stopName: draft.stopNorm, lineCode: draft.lineCode, direction: draft.direction, stopIds };
   // Évite les doublons
   const exists = watchers.some(
     (x) => x.stopName === w.stopName && x.lineCode === w.lineCode && x.direction === w.direction
@@ -740,8 +748,9 @@ async function addWatcher() {
 
 async function validateSelection() {
   if (!draft.stopNorm || !draft.lineCode || !draft.direction) return;
+  const stopIds = await getStopIds(draft.stopNorm, draft.lineCode, draft.direction);
   // "Valider" = remplace tout par ce seul watcher
-  watchers = [{ stopName: draft.stopNorm, lineCode: draft.lineCode, direction: draft.direction }];
+  watchers = [{ stopName: draft.stopNorm, lineCode: draft.lineCode, direction: draft.direction, stopIds }];
   setStatus(t("status_saving"));
   await saveWatchers();
   window.close();
@@ -789,14 +798,23 @@ async function init() {
   // Charge les watchers (nouveau format) ou migration one-shot depuis l'ancien format selection
   const stored = await chrome.storage.local.get([STORAGE_KEYS.watchers, STORAGE_KEYS.selection, STORAGE_KEYS.paused]);
   if (Array.isArray(stored[STORAGE_KEYS.watchers])) {
-    // La clé existe (même tableau vide) : on respecte l'état sauvegardé, pas de migration
     watchers = stored[STORAGE_KEYS.watchers];
   } else if (stored[STORAGE_KEYS.selection]?.stopName) {
-    // La clé watchers n'a jamais existé → migration one-shot
     const sel = stored[STORAGE_KEYS.selection];
     watchers = [{ stopName: sel.stopName, lineCode: sel.lineCode, direction: sel.direction }];
     await chrome.storage.local.set({ [STORAGE_KEYS.watchers]: watchers });
   }
+
+  // Enrichit les watchers legacy qui n'ont pas de stopIds
+  let needsSave = false;
+  for (const w of watchers) {
+    if (!Array.isArray(w.stopIds) || w.stopIds.length === 0) {
+      w.stopIds = await getStopIds(w.stopName, w.lineCode, w.direction);
+      if (w.stopIds.length > 0) needsSave = true;
+    }
+  }
+  if (needsSave) await chrome.storage.local.set({ [STORAGE_KEYS.watchers]: watchers });
+
   // Initialise isPaused avant le premier rendu
   isPaused = stored[STORAGE_KEYS.paused] === true;
 

@@ -6,6 +6,8 @@ Stratégie :
 - Une date représentative par profil (jour avec le max de services actifs)
 - Temps stockés en entiers = minutes depuis minuit (325 pour 05:25)
 - Lignes régulières uniquement (pas tram / métro / nuit)
+- Stocke les stop_id GTFS par combinaison (arrêt, ligne, direction) pour
+  permettre un matching fiable via identifiant_station de l'API live.
 
 Format de sortie :
 {
@@ -16,7 +18,8 @@ Format de sortie :
         "DIRECTION_UPPER": {
           "WEEKDAY":  [int, ...],
           "SATURDAY": [int, ...],
-          "SUNDAY":   [int, ...]
+          "SUNDAY":   [int, ...],
+          "_stopIds": ["stop_id_1", "stop_id_2", ...]
         }
       }
     }
@@ -147,6 +150,13 @@ def main():
         )
     )
 
+    # Collecte des stop_id GTFS par (stop_norm, line, direction)
+    stop_ids_map = collections.defaultdict(
+        lambda: collections.defaultdict(
+            lambda: collections.defaultdict(set)
+        )
+    )
+
     row_count = kept = 0
     with z.open("stop_times.txt") as f:
         for row in csv.DictReader(io.TextIOWrapper(f, encoding="utf-8-sig")):
@@ -160,12 +170,15 @@ def main():
             trip_profiles = svc_profile.get(svc_id)
             if not trip_profiles:
                 continue
-            stop_norm = stops.get(row.get("stop_id",""), "")
+            raw_stop_id = row.get("stop_id","")
+            stop_norm = stops.get(raw_stop_id, "")
             if not stop_norm:
                 continue
             tm = normalize_time(row.get("departure_time",""))
             if tm is None:
                 continue
+            # Collecte le stop_id GTFS brut
+            stop_ids_map[stop_norm][line][direction].add(raw_stop_id)
             for profile in trip_profiles:
                 schedules[stop_norm][line][direction][profile].add(tm)
                 kept += 1
@@ -192,6 +205,9 @@ def main():
             for direction, pd in dirs.items():
                 entry = {p: sorted(pd[p]) for p in profile_order if p in pd}
                 if entry:
+                    # Ajoute les stop_id GTFS pour le matching API live
+                    ids = stop_ids_map.get(stop_norm, {}).get(line, {}).get(direction, set())
+                    entry["_stopIds"] = sorted(ids)
                     out_stops[stop_norm][line][direction] = entry
 
     print(f"  {excluded} arrêts exclus, {len(out_stops)} conservés")
@@ -224,15 +240,19 @@ def main():
     print(f"    Période : {result['meta']['gtfs_from']} → {result['meta']['gtfs_until']}")
     print(f"    Profils : {profiles}")
 
-    for key in ("CHU EURASANTE", "PORTE DES POSTES"):
+    for key in ("CHU EURASANTE", "PORTE DES POSTES", "POINT CENTRAL"):
         entry = out_stops.get(key)
         if entry:
             print(f"\n  Aperçu {key}:")
             for line, dirs in list(entry.items())[:2]:
                 for direction, pd in list(dirs.items())[:1]:
+                    stop_ids = pd.get("_stopIds", [])
                     for profile, times in pd.items():
+                        if profile.startswith("_"):
+                            continue
                         hhmm = [f"{t//60:02d}:{t%60:02d}" for t in times[:3]]
                         print(f"    {line} → {direction[:35]} [{profile}]: {hhmm} ({len(times)} horaires)")
+                    print(f"      _stopIds: {stop_ids[:5]}{'...' if len(stop_ids)>5 else ''}")
 
 if __name__ == "__main__":
     main()
