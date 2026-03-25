@@ -397,7 +397,13 @@ function renderStopSuggestions(items, query) {
     return;
   }
   el.stopHint.textContent = items.length ? "" : t("hint_no_suggestion");
-  for (const item of items.slice(0, 12)) {
+
+  // Si un arrêt est déjà sélectionné, n'afficher que lui
+  const visibleItems = draft.stopNorm
+    ? items.filter((item) => item.norm === draft.stopNorm)
+    : items.slice(0, 12);
+
+  for (const item of visibleItems) {
     const li  = document.createElement("li");
     const btn = document.createElement("button");
     btn.type = "button";
@@ -411,7 +417,13 @@ function renderStopSuggestions(items, query) {
 
 function renderLineChoices(lines) {
   el.lineResults.innerHTML = "";
-  for (const line of lines) {
+
+  // Si une ligne est déjà sélectionnée, n'afficher que celle-ci
+  const visibleLines = draft.lineCode
+    ? lines.filter((l) => l === draft.lineCode)
+    : lines;
+
+  for (const line of visibleLines) {
     const li  = document.createElement("li");
     const btn = document.createElement("button");
     btn.type = "button";
@@ -435,7 +447,13 @@ function renderLineChoices(lines) {
 
 function renderDirectionChoices(directions) {
   el.directionResults.innerHTML = "";
-  for (const dir of directions) {
+
+  // Si une direction est déjà sélectionnée, n'afficher que celle-ci
+  const visibleDirs = draft.direction
+    ? directions.filter((d) => d === draft.direction)
+    : directions;
+
+  for (const dir of visibleDirs) {
     const li  = document.createElement("li");
     const btn = document.createElement("button");
     btn.type = "button";
@@ -481,41 +499,93 @@ async function showNextMinutes() {
 // --- Handlers -----------------------------------------------------------------
 
 async function onPickStop(stopNorm) {
-  for (const btn of el.stopResults.querySelectorAll("button")) {
-    btn.classList.toggle("selected", btn.textContent === toDisplayName(stopNorm));
+  // Clic sur l'arrêt déjà sélectionné → désélection, on réaffiche tout
+  if (draft.stopNorm === stopNorm) {
+    draft.stopNorm  = null;
+    draft.lineCode  = null;
+    draft.direction = null;
+    show(el.lineSection, false);
+    show(el.directionSection, false);
+    show(el.validateSection, false);
+    el.lineResults.innerHTML = "";
+    el.directionResults.innerHTML = "";
+    setStatus("");
+    // Réaffiche toutes les suggestions
+    const q = normalizeForSearch(el.stopSearch.value.trim());
+    const prefix = [], contains = [];
+    for (const s of allStops) {
+      if (!s.searchNorm.includes(q)) continue;
+      if (s.searchNorm.startsWith(q)) prefix.push(s);
+      else contains.push(s);
+      if (prefix.length + contains.length >= 60) break;
+    }
+    renderStopSuggestions(prefix.concat(contains), el.stopSearch.value);
+    return;
   }
+
   draft.stopNorm  = stopNorm;
   draft.lineCode  = null;
   draft.direction = null;
   show(el.directionSection, false);
   show(el.validateSection, false);
   el.directionResults.innerHTML = "";
-  el.lineResults.innerHTML = "";
   setStatus("");
   const lines = await getLinesForStop(stopNorm);
+  // Rend la liste avec seulement l'arrêt sélectionné visible
+  const q = normalizeForSearch(el.stopSearch.value.trim());
+  const prefix = [], contains = [];
+  for (const s of allStops) {
+    if (!s.searchNorm.includes(q)) continue;
+    if (s.searchNorm.startsWith(q)) prefix.push(s);
+    else contains.push(s);
+    if (prefix.length + contains.length >= 60) break;
+  }
+  renderStopSuggestions(prefix.concat(contains), el.stopSearch.value);
   show(el.lineSection, true);
   renderLineChoices(lines);
 }
 
 async function onPickLine(lineCode) {
-  for (const btn of el.lineResults.querySelectorAll("button")) {
-    btn.classList.toggle("selected", btn.getAttribute("aria-label") === `Ligne ${lineCode}`);
+  // Clic sur la ligne déjà sélectionnée → désélection
+  if (draft.lineCode === lineCode) {
+    draft.lineCode  = null;
+    draft.direction = null;
+    show(el.directionSection, false);
+    show(el.validateSection, false);
+    el.directionResults.innerHTML = "";
+    setStatus("");
+    const lines = await getLinesForStop(draft.stopNorm);
+    renderLineChoices(lines);
+    return;
   }
+
   draft.lineCode  = lineCode;
   draft.direction = null;
   show(el.validateSection, false);
   el.directionResults.innerHTML = "";
   setStatus("");
   const directions = await getDirections(draft.stopNorm, lineCode);
+  // Rend la liste avec seulement la ligne sélectionnée visible
+  const lines = await getLinesForStop(draft.stopNorm);
+  renderLineChoices(lines);
   show(el.directionSection, true);
   renderDirectionChoices(directions);
 }
 
 async function onPickDirection(direction) {
-  for (const btn of el.directionResults.querySelectorAll("button")) {
-    btn.classList.toggle("selected", btn.textContent === direction);
+  // Clic sur la direction déjà sélectionnée → désélection
+  if (draft.direction === direction) {
+    draft.direction = null;
+    show(el.validateSection, false);
+    setStatus("");
+    const directions = await getDirections(draft.stopNorm, draft.lineCode);
+    renderDirectionChoices(directions);
+    return;
   }
+
   draft.direction = direction;
+  const directions = await getDirections(draft.stopNorm, draft.lineCode);
+  renderDirectionChoices(directions);
   updateSummary();
   await showNextMinutes();
 }
