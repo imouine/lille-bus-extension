@@ -43,6 +43,7 @@ const el = {
   addWatcherBtn:    document.getElementById("addWatcherBtn"),
   watchersSection:  document.getElementById("watchersSection"),
   watchersList:     document.getElementById("watchersList"),
+  clearWatchersBtn: document.getElementById("clearWatchersBtn"),
   status:           document.getElementById("status"),
   openOptionsBtn:   document.getElementById("openOptionsBtn"),
   pauseBtn:         document.getElementById("pauseBtn"),
@@ -65,6 +66,7 @@ const I18N = {
     btn_pause:             "Pause",
     btn_resume:            "Reprendre",
     label_watchers:        "Surveillés",
+    btn_clear_all:         "Tout supprimer",
     hint_min_letters:      "Tape au moins 2 lettres.",
     hint_no_suggestion:    "Aucune suggestion.",
     hint_selection_loaded: "Sélection actuelle chargée.",
@@ -88,6 +90,7 @@ const I18N = {
     btn_pause:             "Pause",
     btn_resume:            "Resume",
     label_watchers:        "Watching",
+    btn_clear_all:         "Clear all",
     hint_min_letters:      "Type at least 2 letters.",
     hint_no_suggestion:    "No suggestions.",
     hint_selection_loaded: "Current selection loaded.",
@@ -420,12 +423,17 @@ function timeUrgency(minutes, isLive) {
 function setWatcherTimeBadge(badge, minutes, isLive) {
   if (minutes === null) {
     badge.removeAttribute("data-urgency");
-    badge.innerHTML = `<span>—</span>`;
+    badge.innerHTML = `<span class="watcherTimeUnit">—</span>`;
     return;
   }
   badge.dataset.urgency = timeUrgency(minutes, isLive);
-  badge.innerHTML =
-    `${minutes}<span class="watcherTimeUnit"> min</span>`;
+  if (isLive) {
+    badge.innerHTML =
+      `<span class="watcherTimeDot"></span>${minutes}<span class="watcherTimeUnit"> min</span>`;
+  } else {
+    badge.innerHTML =
+      `<span class="watcherTimeUnit">~</span>${minutes}<span class="watcherTimeUnit"> min</span>`;
+  }
 }
 
 async function renderWatchers() {
@@ -465,7 +473,7 @@ async function renderWatchers() {
     dirEl.title       = w.direction;
     li.appendChild(dirEl);
 
-    // Col 3 — badge temps + bouton ×
+    // Col 3 — badge temps
     const right = document.createElement("div");
     right.className = "watcherRight";
 
@@ -483,7 +491,9 @@ async function renderWatchers() {
       }
     }
     right.appendChild(timeBadge);
+    li.appendChild(right);
 
+    // Bouton × — positionné en absolu haut-droite de l'item
     const rm = document.createElement("button");
     rm.className   = "watcherRemove";
     rm.type        = "button";
@@ -495,8 +505,7 @@ async function renderWatchers() {
       await renderWatchers();
       await showNextMinutes();
     });
-    right.appendChild(rm);
-    li.appendChild(right);
+    li.appendChild(rm);
 
     el.watchersList.appendChild(li);
   }
@@ -605,42 +614,7 @@ function updateSummary() {
 // --- Affichage des minutes ----------------------------------------------------
 
 async function showNextMinutes() {
-  if (watchers.length === 0 && !(draft.stopNorm && draft.lineCode && draft.direction)) {
-    setStatus("");
-    return;
-  }
-
-  if (isPaused) {
-    setStatus(t("status_paused"));
-    return;
-  }
-
-  // Lit les résultats déjà calculés par le service worker (0 appel API)
-  const { [STORAGE_KEYS.watcherResults]: stored } =
-    await chrome.storage.local.get([STORAGE_KEYS.watcherResults]);
-  const results = Array.isArray(stored) ? stored : [];
-
-  // Meilleur live parmi les watchers
-  let bestLive = null;
-  for (const r of results) {
-    if (r?.isLive && r.minutes !== null && (bestLive === null || r.minutes < bestLive)) {
-      bestLive = r.minutes;
-    }
-  }
-  if (bestLive !== null) {
-    const key = results.length > 1 ? "next_best" : "next_live";
-    setStatus(t(key, { min: bestLive }));
-    return;
-  }
-
-  // Meilleur théorique parmi les watchers
-  let bestTheo = null;
-  for (const r of results) {
-    if (!r?.isLive && r?.minutes !== null && (bestTheo === null || r.minutes < bestTheo)) {
-      bestTheo = r.minutes;
-    }
-  }
-  setStatus(bestTheo !== null ? t("next_theoretical", { min: bestTheo }) : t("no_next"));
+  setStatus("");
 }
 
 // --- Handlers -----------------------------------------------------------------
@@ -857,6 +831,13 @@ async function init() {
   el.addWatcherBtn.addEventListener("click", addWatcher);
   if (el.openOptionsBtn) {
     el.openOptionsBtn.addEventListener("click", () => chrome.runtime.openOptionsPage());
+  }
+  if (el.clearWatchersBtn) {
+    el.clearWatchersBtn.addEventListener("click", async () => {
+      watchers = [];
+      await saveWatchers();
+      await renderWatchers();
+    });
   }
 
   // --- Bouton pause/play ---
