@@ -257,6 +257,97 @@ function minutesUntilFromRecord(record) {
   return null;
 }
 
+// ---------- Badge visuel (couleur + effet de respiration) ----------
+
+/**
+ * Palette de couleurs selon les minutes restantes (données live uniquement).
+ *   > 5 min  → bleu   (#1976d2) — normal
+ *   2–5 min  → orange (#e65100) — vigilance
+ *   0–1 min  → rouge  (#c62828) — imminent
+ */
+function badgeColor(minutes) {
+  if (minutes <= 1) return { r: 198, g: 40,  b: 40  }; // rouge
+  if (minutes <= 5) return { r: 230, g: 81,  b: 0   }; // orange
+  return                   { r: 25,  g: 118, b: 210 }; // bleu
+}
+
+function colorToHex({ r, g, b }) {
+  return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+}
+
+function lerpColor(a, b, t) {
+  return {
+    r: Math.round(a.r + (b.r - a.r) * t),
+    g: Math.round(a.g + (b.g - a.g) * t),
+    b: Math.round(a.b + (b.b - a.b) * t),
+  };
+}
+
+const WHITE = { r: 255, g: 255, b: 255 };
+
+/** État de l'animation */
+let _isLive          = false;
+let _lastLiveMinutes = null;
+let _beatTimer       = null;
+let _beatPhase       = 0; // 0..2π, avance à chaque tick
+
+/**
+ * Respiration sinusoïdale douce :
+ * - Tick toutes les 80 ms
+ * - Période complète ~4 s (15 "respirations" par minute)
+ * - Courbe : (1 - cos(phase)) / 2  → montée et descente parfaitement symétriques
+ *   La valeur reste proche de 0 la plupart du temps et monte doucement au pic.
+ */
+const BREATHE_INTERVAL_MS = 80;
+const BREATHE_PERIOD_MS   = 4000;
+const BREATHE_STEP        = (2 * Math.PI * BREATHE_INTERVAL_MS) / BREATHE_PERIOD_MS;
+
+/**
+ * Amplitude du flash selon l'urgence :
+ *   > 5 min → très subtil (12 % vers blanc) — à peine perceptible
+ *   2–5 min → léger (28 %)
+ *   ≤ 1 min → visible (50 %)
+ */
+function breatheAmplitude(minutes) {
+  if (minutes <= 1) return 0.50;
+  if (minutes <= 5) return 0.28;
+  return 0.12;
+}
+
+async function glowEnabled() {
+  const { [STORAGE_KEYS.prefs]: prefs } = await chrome.storage.local.get([STORAGE_KEYS.prefs]);
+  // Par défaut activé si la préférence n'existe pas encore
+  return prefs?.glowEnabled !== false;
+}
+
+function startBeatLoop() {
+  if (_beatTimer !== null) return;
+  _beatPhase = 0;
+  _beatTimer = setInterval(async () => {
+    if (!_isLive || _lastLiveMinutes === null) return;
+    if (!(await glowEnabled())) return;
+
+    _beatPhase += BREATHE_STEP;
+    // intensité ∈ [0, 1], courbe sinusoïdale douce
+    const intensity = (1 - Math.cos(_beatPhase)) / 2;
+    const amplitude = breatheAmplitude(_lastLiveMinutes);
+
+    const base  = badgeColor(_lastLiveMinutes);
+    const mixed = lerpColor(base, WHITE, intensity * amplitude);
+    chrome.action.setBadgeBackgroundColor({ color: colorToHex(mixed) });
+  }, BREATHE_INTERVAL_MS);
+}
+
+function stopBeatLoop() {
+  if (_beatTimer !== null) {
+    clearInterval(_beatTimer);
+    _beatTimer = null;
+  }
+}
+
+// Démarre l'animation dès le chargement du service worker
+startBeatLoop();
+
 async function setBadge(text) {
   await chrome.action.setBadgeText({ text });
 }
@@ -304,13 +395,13 @@ async function refreshBadge() {
   );
 
   if (!selection || !selection.stopName || !selection.lineCode || !selection.direction) {
+    _isLive = false;
+    _lastLiveMinutes = null;
     await setBadge("…");
     return;
   }
 
   try {
-    // L'API MEL prefixe souvent les noms avec la ville ("LILLE PORTE DES POSTES"
-    // au lieu de "PORTE DES POSTES"). On utilise LIKE '%NOM' pour couvrir les deux cas.
     const nameNorm = noAccents(selection.stopName).toUpperCase();
     const filter = `nom_station LIKE ${cqlQuote("%" + nameNorm)}`;
     const url = buildUrl({ limit: 200, filter });
@@ -333,9 +424,11 @@ async function refreshBadge() {
     }
 
     if (best === null) {
-      // Fallback : horaire théorique depuis schedules.json
+      // Fallback théorique — pas d'animation
+      _isLive = false;
+      _lastLiveMinutes = null;
       const theoretical = await nextTheoreticalMinutes(
-        selection.stopName,   // déjà normalisé (UPPER sans accents)
+        selection.stopName,
         selection.lineCode,
         selection.direction
       );
@@ -349,18 +442,24 @@ async function refreshBadge() {
       return;
     }
 
-    await chrome.action.setBadgeBackgroundColor({ color: "#1976d2" });
+    // Données live — active/met à jour le battement
+    _lastLiveMinutes = best;
+    _isLive = true;
+    _beatPhase = 0; // repart du début du cycle à chaque refresh
+
+    // Couleur de base immédiate (le beat loop prend ensuite le relais)
+    await chrome.action.setBadgeBackgroundColor({ color: colorToHex(badgeColor(best)) });
     await setBadge(best > 99 ? "99+" : String(best));
   } catch (e) {
     console.error("refreshBadge failed", e);
+    _isLive = false;
+    _lastLiveMinutes = null;
     await setBadge("!");
   }
 }
 
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm && alarm.name === "refresh-badge") {
-    refreshBadge();
-  }
+  if (alarm?.name === "refresh-badge") refreshBadge();
 });
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {

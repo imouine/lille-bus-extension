@@ -21,6 +21,7 @@ const I18N = {
     label_lang:            "English",
     label_refresh_section: "Actualisation",
     label_refresh:         "Fréquence d'actualisation",
+    label_glow:            "Effet de glow",
     saved:                 "Préférences enregistrées",
   },
   en: {
@@ -30,11 +31,12 @@ const I18N = {
     label_lang:            "Français",
     label_refresh_section: "Refresh",
     label_refresh:         "Refresh interval",
+    label_glow:            "Glow effect",
     saved:                 "Preferences saved",
   },
 };
 
-let prefs = { theme: "light", lang: "fr", refreshIdx: DEFAULT_REFRESH_IDX };
+let prefs = { theme: "light", lang: "fr", refreshIdx: DEFAULT_REFRESH_IDX, glowEnabled: true };
 
 function t(key) {
   const dict = I18N[prefs.lang] || I18N.fr;
@@ -56,6 +58,7 @@ function applyLanguage() {
   document.getElementById("label_lang").textContent            = t("label_lang");
   document.getElementById("label_refresh_section").textContent = t("label_refresh_section");
   document.getElementById("label_refresh").textContent         = t("label_refresh");
+  document.getElementById("label_glow").textContent            = t("label_glow");
 }
 
 function applyRefresh() {
@@ -67,6 +70,10 @@ function applyRefresh() {
   // Mise à jour de la couleur de la piste (CSS custom property)
   const pct = (idx / (REFRESH_STEPS_MIN.length - 1)) * 100;
   slider.style.setProperty("--pct", `${pct}%`);
+}
+
+function applyGlow() {
+  document.getElementById("glowToggle").checked = prefs.glowEnabled !== false;
 }
 
 function showSaved() {
@@ -87,6 +94,7 @@ async function loadPrefs() {
     if (Number.isInteger(stored.refreshIdx) && stored.refreshIdx >= 0 && stored.refreshIdx < REFRESH_STEPS_MIN.length) {
       prefs.refreshIdx = stored.refreshIdx;
     }
+    prefs.glowEnabled = stored.glowEnabled !== false; // true par défaut
   } else {
     prefs.theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   }
@@ -107,6 +115,7 @@ async function init() {
   applyTheme();
   applyLanguage();
   applyRefresh();
+  applyGlow();
 
   document.getElementById("themeToggle").addEventListener("change", async (e) => {
     prefs.theme = e.target.checked ? "dark" : "light";
@@ -126,6 +135,11 @@ async function init() {
   });
 
   document.getElementById("refreshSlider").addEventListener("change", async () => {
+    await savePrefs();
+  });
+
+  document.getElementById("glowToggle").addEventListener("change", async (e) => {
+    prefs.glowEnabled = e.target.checked;
     await savePrefs();
   });
 }
