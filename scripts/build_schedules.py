@@ -1,33 +1,34 @@
 """
-Génère src/data/schedules.json à partir du GTFS Ilevia.
+Generates src/data/schedules.json from the Ilevia GTFS feed.
 
-Stratégie :
-- 3 profils de jour : WEEKDAY, SATURDAY, SUNDAY
-- Une date représentative par profil (jour avec le max de services actifs)
-- Temps stockés en entiers = minutes depuis minuit (325 pour 05:25)
-- Lignes régulières uniquement (pas tram / métro / nuit)
-- Stocke les stop_id GTFS par combinaison (arrêt, ligne, direction) pour
-  permettre un matching fiable via identifiant_station de l'API live.
+Strategy:
+  - 3 day profiles: WEEKDAY, SATURDAY, SUNDAY
+  - One representative date per profile (the day with the most active services)
+  - Times stored as integers = minutes since midnight (325 for 05:25)
+  - Regular bus lines only (excludes tram, metro, night buses)
+  - Stores GTFS stop_ids per (stop, line, direction) for reliable matching
+    with the live API's identifiant_station field
 
-Format de sortie :
-{
-  "meta": { "generated", "gtfs_from", "gtfs_until", "source", "profiles" },
-  "stops": {
-    "STOP_NORM_UPPER": {
-      "LIGNE": {
-        "DIRECTION_UPPER": {
-          "WEEKDAY":  [int, ...],
-          "SATURDAY": [int, ...],
-          "SUNDAY":   [int, ...],
-          "_stopIds": ["stop_id_1", "stop_id_2", ...]
+Output format:
+  {
+    "meta": { "generated", "gtfs_from", "gtfs_until", "source", "profiles" },
+    "stops": {
+      "STOP_NORM_UPPER": {
+        "LINE_CODE": {
+          "DIRECTION_UPPER": {
+            "WEEKDAY":  [int, ...],
+            "SATURDAY": [int, ...],
+            "SUNDAY":   [int, ...],
+            "_stopIds": ["stop_id_1", "stop_id_2", ...]
+          }
         }
       }
     }
   }
-}
 
-Usage : python3 scripts/build_schedules.py
+Usage: python scripts/build_schedules.py
 """
+
 import urllib.request, zipfile, io, csv, json, collections, re, unicodedata
 from datetime import datetime, date
 from pathlib import Path
@@ -36,27 +37,36 @@ GTFS_URL = "https://media.ilevia.fr/opendata/gtfs.zip"
 OUT_PATH = Path(__file__).parent.parent / "src" / "data" / "schedules.json"
 MIN_TIMES_PER_STOP = 5
 
+
 def strip_accents(s):
+    """Remove diacritical marks from a string."""
     return "".join(
         c for c in unicodedata.normalize("NFD", s)
         if unicodedata.category(c) != "Mn"
     )
 
+
 def normalize_stop(name):
+    """Normalize a stop name to uppercase without accents."""
     return strip_accents(name.strip()).upper()
 
+
 def is_regular_bus(route_short_name, route_type):
+    """Returns True if the route is a regular daytime bus (not tram/metro/night)."""
     name = (route_short_name or "").strip().upper()
     if not name:
         return False
+    # route_type: 0=tram, 1=metro, 2=rail, 12=monorail — skip all
     if str(route_type) in ("0", "1", "2", "12"):
         return False
+    # Night buses start with "N" followed by digits
     if re.match(r"^N\d", name):
         return False
     return True
 
+
 def normalize_time(t):
-    """GTFS 25:10:00 -> 1510 (minutes depuis minuit, entier)"""
+    """Convert a GTFS time string (e.g. "25:10:00") to minutes since midnight."""
     parts = t.split(":")
     if len(parts) < 2:
         return None
@@ -66,12 +76,15 @@ def normalize_time(t):
     except ValueError:
         return None
 
+
 def pick_representative_dates(svc_dates):
-    """Choisit une date par type (WEEKDAY/SATURDAY/SUNDAY) avec le max de services."""
+    """Pick one representative date per day type (WEEKDAY/SATURDAY/SUNDAY)
+    by choosing the date with the maximum number of active services."""
     date_counts = collections.Counter()
     for dates in svc_dates.values():
         for d in dates:
             date_counts[d] += 1
+
     by_type = {"WEEKDAY": [], "SATURDAY": [], "SUNDAY": []}
     for d_str, count in date_counts.items():
         try:
@@ -85,41 +98,47 @@ def pick_representative_dates(svc_dates):
             by_type["SATURDAY"].append((count, d_str))
         else:
             by_type["SUNDAY"].append((count, d_str))
+
     return {p: max(v)[1] for p, v in by_type.items() if v}
 
+
 def main():
-    print(f"Téléchargement GTFS depuis {GTFS_URL} ...")
+    print(f"Downloading GTFS from {GTFS_URL} ...")
     req = urllib.request.Request(GTFS_URL, headers={"User-Agent": "build_schedules/1.0"})
     with urllib.request.urlopen(req, timeout=120) as r:
         content = r.read()
-    print(f"  {len(content)/1e6:.1f} Mo téléchargés")
+    print(f"  {len(content) / 1e6:.1f} MB downloaded")
     z = zipfile.ZipFile(io.BytesIO(content))
 
-    print("Lecture stops.txt ...")
+    # ── Read stops.txt ──────────────────────────────────────────────────────
+    print("Reading stops.txt ...")
     stops = {}
     with z.open("stops.txt") as f:
         for row in csv.DictReader(io.TextIOWrapper(f, encoding="utf-8-sig")):
             stops[row["stop_id"]] = normalize_stop(row.get("stop_name", ""))
 
-    print("Lecture routes.txt ...")
+    # ── Read routes.txt ─────────────────────────────────────────────────────
+    print("Reading routes.txt ...")
     bus_routes = {}
     with z.open("routes.txt") as f:
         for row in csv.DictReader(io.TextIOWrapper(f, encoding="utf-8-sig")):
-            if is_regular_bus(row.get("route_short_name",""), row.get("route_type","3")):
+            if is_regular_bus(row.get("route_short_name", ""), row.get("route_type", "3")):
                 bus_routes[row["route_id"]] = row["route_short_name"].strip().upper()
-    print(f"  {len(bus_routes)} routes bus")
+    print(f"  {len(bus_routes)} bus routes")
 
-    print("Lecture trips.txt ...")
+    # ── Read trips.txt ──────────────────────────────────────────────────────
+    print("Reading trips.txt ...")
     bus_trips = {}
     with z.open("trips.txt") as f:
         for row in csv.DictReader(io.TextIOWrapper(f, encoding="utf-8-sig")):
-            rid = row.get("route_id","")
+            rid = row.get("route_id", "")
             if rid in bus_routes:
-                head = normalize_stop(row.get("trip_headsign",""))
-                bus_trips[row["trip_id"]] = (bus_routes[rid], head, row.get("service_id",""))
-    print(f"  {len(bus_trips)} trips bus")
+                head = normalize_stop(row.get("trip_headsign", ""))
+                bus_trips[row["trip_id"]] = (bus_routes[rid], head, row.get("service_id", ""))
+    print(f"  {len(bus_trips)} bus trips")
 
-    print("Lecture calendar_dates.txt ...")
+    # ── Read calendar_dates.txt ─────────────────────────────────────────────
+    print("Reading calendar_dates.txt ...")
     svc_dates = collections.defaultdict(set)
     date_min, date_max = "99999999", "00000000"
     with z.open("calendar_dates.txt") as f:
@@ -127,21 +146,24 @@ def main():
             if row.get("exception_type") == "1":
                 d = row["date"]
                 svc_dates[row["service_id"]].add(d)
-                if d < date_min: date_min = d
-                if d > date_max: date_max = d
+                if d < date_min:
+                    date_min = d
+                if d > date_max:
+                    date_max = d
 
     profiles = pick_representative_dates(svc_dates)
-    print(f"  Période couverte: {date_min} → {date_max}")
-    print(f"  Profils: {profiles}")
+    print(f"  Period covered: {date_min} -> {date_max}")
+    print(f"  Profiles: {profiles}")
 
-    # service_id -> set de profils auxquels il participe
+    # Map service_id -> set of profiles it participates in
     svc_profile = collections.defaultdict(set)
     for profile, d_str in profiles.items():
         for svc_id, dates in svc_dates.items():
             if d_str in dates:
                 svc_profile[svc_id].add(profile)
 
-    print("Lecture stop_times.txt (68 Mo) ...")
+    # ── Read stop_times.txt ─────────────────────────────────────────────────
+    print("Reading stop_times.txt ...")
     schedules = collections.defaultdict(
         lambda: collections.defaultdict(
             lambda: collections.defaultdict(
@@ -150,7 +172,7 @@ def main():
         )
     )
 
-    # Collecte des stop_id GTFS par (stop_norm, line, direction)
+    # Collect GTFS stop_ids per (stop_norm, line, direction)
     stop_ids_map = collections.defaultdict(
         lambda: collections.defaultdict(
             lambda: collections.defaultdict(set)
@@ -162,29 +184,29 @@ def main():
         for row in csv.DictReader(io.TextIOWrapper(f, encoding="utf-8-sig")):
             row_count += 1
             if row_count % 500_000 == 0:
-                print(f"  ... {row_count:,} lignes / {kept:,} retenues")
-            trip = bus_trips.get(row.get("trip_id",""))
+                print(f"  ... {row_count:,} rows / {kept:,} kept")
+            trip = bus_trips.get(row.get("trip_id", ""))
             if not trip:
                 continue
             line, direction, svc_id = trip
             trip_profiles = svc_profile.get(svc_id)
             if not trip_profiles:
                 continue
-            raw_stop_id = row.get("stop_id","")
+            raw_stop_id = row.get("stop_id", "")
             stop_norm = stops.get(raw_stop_id, "")
             if not stop_norm:
                 continue
-            tm = normalize_time(row.get("departure_time",""))
+            tm = normalize_time(row.get("departure_time", ""))
             if tm is None:
                 continue
-            # Collecte le stop_id GTFS brut
             stop_ids_map[stop_norm][line][direction].add(raw_stop_id)
             for profile in trip_profiles:
                 schedules[stop_norm][line][direction][profile].add(tm)
                 kept += 1
 
-    print(f"  {row_count:,} lignes lues, {kept:,} retenues, {len(schedules)} arrêts")
+    print(f"  {row_count:,} rows read, {kept:,} kept, {len(schedules)} stops")
 
+    # ── Build output ────────────────────────────────────────────────────────
     out_stops = {}
     excluded = 0
     profile_order = ["WEEKDAY", "SATURDAY", "SUNDAY"]
@@ -205,12 +227,11 @@ def main():
             for direction, pd in dirs.items():
                 entry = {p: sorted(pd[p]) for p in profile_order if p in pd}
                 if entry:
-                    # Ajoute les stop_id GTFS pour le matching API live
                     ids = stop_ids_map.get(stop_norm, {}).get(line, {}).get(direction, set())
                     entry["_stopIds"] = sorted(ids)
                     out_stops[stop_norm][line][direction] = entry
 
-    print(f"  {excluded} arrêts exclus, {len(out_stops)} conservés")
+    print(f"  {excluded} stops excluded, {len(out_stops)} kept")
     total_times = sum(
         len(times)
         for lines in out_stops.values()
@@ -218,15 +239,15 @@ def main():
         for pd in dirs.values()
         for times in pd.values()
     )
-    print(f"  {total_times:,} horaires stockés (entiers)")
+    print(f"  {total_times:,} schedule entries stored (integers)")
 
     result = {
         "meta": {
-            "generated":  datetime.now().strftime("%Y-%m-%d"),
-            "gtfs_from":  f"{date_min[:4]}-{date_min[4:6]}-{date_min[6:]}",
+            "generated": datetime.now().strftime("%Y-%m-%d"),
+            "gtfs_from": f"{date_min[:4]}-{date_min[4:6]}-{date_min[6:]}",
             "gtfs_until": f"{date_max[:4]}-{date_max[4:6]}-{date_max[6:]}",
-            "source":     GTFS_URL,
-            "profiles":   profiles,
+            "source": GTFS_URL,
+            "profiles": profiles,
         },
         "stops": out_stops,
     }
@@ -236,23 +257,25 @@ def main():
         json.dump(result, f, ensure_ascii=False, separators=(",", ":"))
 
     size = OUT_PATH.stat().st_size
-    print(f"\n✅  {OUT_PATH.name}  —  {size/1024:.0f} Ko ({size/1e6:.2f} Mo)")
-    print(f"    Période : {result['meta']['gtfs_from']} → {result['meta']['gtfs_until']}")
-    print(f"    Profils : {profiles}")
+    print(f"\n  {OUT_PATH.name}  --  {size / 1024:.0f} KB ({size / 1e6:.2f} MB)")
+    print(f"    Period: {result['meta']['gtfs_from']} -> {result['meta']['gtfs_until']}")
+    print(f"    Profiles: {profiles}")
 
+    # Print a preview for key stops
     for key in ("CHU EURASANTE", "PORTE DES POSTES", "POINT CENTRAL"):
         entry = out_stops.get(key)
         if entry:
-            print(f"\n  Aperçu {key}:")
+            print(f"\n  Preview: {key}")
             for line, dirs in list(entry.items())[:2]:
                 for direction, pd in list(dirs.items())[:1]:
                     stop_ids = pd.get("_stopIds", [])
                     for profile, times in pd.items():
                         if profile.startswith("_"):
                             continue
-                        hhmm = [f"{t//60:02d}:{t%60:02d}" for t in times[:3]]
-                        print(f"    {line} → {direction[:35]} [{profile}]: {hhmm} ({len(times)} horaires)")
-                    print(f"      _stopIds: {stop_ids[:5]}{'...' if len(stop_ids)>5 else ''}")
+                        hhmm = [f"{t // 60:02d}:{t % 60:02d}" for t in times[:3]]
+                        print(f"    {line} -> {direction[:35]} [{profile}]: {hhmm} ({len(times)} entries)")
+                    print(f"      _stopIds: {stop_ids[:5]}{'...' if len(stop_ids) > 5 else ''}")
+
 
 if __name__ == "__main__":
     main()

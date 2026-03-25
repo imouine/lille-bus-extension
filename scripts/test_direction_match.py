@@ -1,8 +1,13 @@
 """
-Vérifie que la nouvelle directionMatches() couvre tous les cas de mismatch.
+Verifies that the fuzzy directionMatches() function covers all known mismatch cases
+between the MEL API's sens_ligne and GTFS trip headsigns.
+
+Usage: python scripts/test_direction_match.py
 """
 
+
 def direction_matches(sens, gtfs_dir):
+    """Port of the JS directionMatches() function for offline testing."""
     if not sens or not gtfs_dir:
         return False
     if sens == gtfs_dir:
@@ -27,15 +32,17 @@ def direction_matches(sens, gtfs_dir):
         for w in significant
     )
 
+
+# Test cases: (API sens_ligne, GTFS direction, expected result)
 cases = [
-    # (sens_ligne API,                  direction GTFS,                          attendu)
+    # True positives
     ("MARCQ FERME AUX OIES",            "MARCQ EN BAROEUL FERME AUX OIES",       True),
     ("FACHES CENTRE COMMERCIAL",        "FACHES THUMESNIL CTRE COMMERCIAL",      True),
     ("MARQUETTE LES VOILES",            "MARQUETTE LEZ LILLE LES VOILES",        True),
     ("VILLENEUVE D'ASCQ HOTEL DE VILLE","VILLENEUVE D ASCQ HOTEL DE VILLE",      True),
     ("V. D'ASCQ CONTRESCARPE",          "VILLENEUVE D ASCQ CONTRESCARPE",        True),
     ("HAUBOURDIN LE PARC",              "HAUBOURDIN LE PARC",                    True),
-    # Faux positifs à éviter
+    # True negatives (should NOT match)
     ("LOOS LES OLIVEAUX",               "WATTIGNIES CENTRE COMMERCIAL",          False),
     ("HAUBOURDIN LE PARC",              "MARCQ EN BAROEUL FERME AUX OIES",       False),
 ]
@@ -43,10 +50,10 @@ cases = [
 all_ok = True
 for sens, gtfs, expected in cases:
     result = direction_matches(sens, gtfs)
-    status = "✅" if result == expected else "❌"
+    status = "PASS" if result == expected else "FAIL"
     if result != expected:
         all_ok = False
-    print(f"{status} {repr(sens)[:40]:<42} -> {repr(gtfs)[:42]:<44} attendu={expected} got={result}")
+    print(f"{status}  {repr(sens)[:40]:<42} -> {repr(gtfs)[:42]:<44} expected={expected} got={result}")
 
 print()
-print("✅ Tous les cas OK" if all_ok else "❌ Des cas échouent")
+print("All tests passed." if all_ok else "Some tests FAILED.")

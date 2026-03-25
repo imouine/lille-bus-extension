@@ -1,5 +1,7 @@
 """
-Analyse les mismatches entre sens_ligne (API MEL) et directions GTFS (schedules.json).
+Analyzes mismatches between the API's sens_ligne and GTFS directions in schedules.json.
+
+Usage: python scripts/check_direction_match.py
 """
 import urllib.request, urllib.parse, json
 
@@ -31,7 +33,7 @@ for r in data.get("records", []):
             seen.add(key)
             mismatches.append((ligne, sens, gtfs_dirs))
 
-print(f"{len(mismatches)} cas sans match\n")
+print(f"{len(mismatches)} unmatched cases\n")
 for ligne, sens, dirs in mismatches[:30]:
     print(f"  API  : {ligne} | {repr(sens)}")
     print(f"  GTFS : {dirs}")

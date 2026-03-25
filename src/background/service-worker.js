@@ -1,10 +1,24 @@
-/*
- * Lille Bus Extension
- * Author: imouine
- * Copyright (c) 2026
- * License: GPL-3.0
- * https://github.com/imouine/lille-bus-extension
+/**
+ * Lille Bus Extension — Service Worker
+ *
+ * Responsibilities:
+ *   - Periodically fetch live departure times from the MEL API
+ *   - Update the Chrome action badge (text, color, breathing animation)
+ *   - Persist per-watcher results so the popup can read them without extra API calls
+ *   - Fall back to static GTFS timetables when live data is unavailable
+ *
+ * Architecture:
+ *   - An alarm ("refresh-badge") triggers refreshBadge() at a configurable interval
+ *   - When the popup is open, it connects via a port and takes over refresh scheduling;
+ *     the alarm still fires but is ignored to avoid duplicate API calls
+ *   - The popup communicates via chrome.runtime messages (badge:refresh, badge:pause, etc.)
+ *
+ * @author imouine
+ * @license GPL-3.0
+ * @see https://github.com/imouine/lille-bus-extension
  */
+
+// ── Lifecycle ──────────────────────────────────────────────────────────────────
 
 chrome.runtime.onInstalled.addListener(async () => {
   chrome.action.setBadgeText({ text: "…" });
@@ -18,6 +32,8 @@ chrome.runtime.onStartup.addListener(async () => {
   chrome.alarms.create("refresh-badge", { periodInMinutes: period });
 });
 
+// ── Constants ──────────────────────────────────────────────────────────────────
+
 const API_URL =
   "https://data.lillemetropole.fr/data/ogcapi/collections/ilevia%3Aprochains_passages/items?f=json";
 
@@ -26,10 +42,16 @@ const STORAGE_KEYS = {
   prefs:          "prefs",
   paused:         "paused",
   watchers:       "watchers",
-  watcherResults: "watcherResults", // résultats par watcher, lus par la popup
+  watcherResults: "watcherResults",
 };
 
-/** État de pause — mis en cache pour éviter un storage.get à chaque tick */
+/** Refresh slider steps in minutes — mirrors options.js */
+const REFRESH_STEPS_MIN   = [1/12, 1/6, 1/4, 0.5, 1]; // 5s, 10s, 15s, 30s, 60s
+const DEFAULT_REFRESH_IDX = 4; // 60 s
+
+// ── Pause state ────────────────────────────────────────────────────────────────
+
+/** Cached in-memory to avoid a storage.get on every breathe tick. */
 let _isPaused = false;
 
 async function loadPausedState() {
@@ -37,34 +59,16 @@ async function loadPausedState() {
   _isPaused = val === true;
 }
 
-// ---------- Animation badge en pause ----------
-
-/**
- * En pause, le badge affiche une animation douce :
- * - Texte qui alterne entre "II" et "·· " toutes les 2 s
- * - Couleur qui respire entre deux gris (foncé → clair) en sinusoïde ~3 s
- * Effet : subtil, immédiatement reconnaissable comme "en attente".
- */
-function startPauseAnimation() {
+/** Show a static grey "II" badge when paused. */
+function applyPausedBadge() {
+  _isLive = false;
+  _lastLiveMinutes = null;
   chrome.action.setBadgeBackgroundColor({ color: "#616161" });
   chrome.action.setBadgeTextColor({ color: "#FFFFFF" });
   chrome.action.setBadgeText({ text: "II" });
 }
 
-function stopPauseAnimation() {
-  // rien à stopper, l'état est statique
-}
-
-async function applyPausedBadge() {
-  // Arrête le glow live
-  _isLive = false;
-  _lastLiveMinutes = null;
-  startPauseAnimation();
-}
-
-// Crans de fréquence (miroir de options.js)
-const REFRESH_STEPS_MIN  = [1/12, 1/6, 1/4, 0.5, 1];
-const DEFAULT_REFRESH_IDX = 4; // 60s
+// ── Alarm helpers ──────────────────────────────────────────────────────────────
 
 async function getRefreshPeriod() {
   const { [STORAGE_KEYS.prefs]: prefs } = await chrome.storage.local.get([STORAGE_KEYS.prefs]);
@@ -80,15 +84,12 @@ async function resetAlarm(periodInMinutes) {
   chrome.alarms.create("refresh-badge", { periodInMinutes });
 }
 
-// ---------- Horaires théoriques (schedules.json) ----------
+// ── Static timetables (schedules.json) ─────────────────────────────────────────
 
-/** Cache en mémoire — chargé une fois par session du service worker */
+/** In-memory cache — loaded once per service worker session. */
 let _schedulesCache = null;
 
-/**
- * Retourne le profil du jour courant : "WEEKDAY" | "SATURDAY" | "SUNDAY"
- * Utilise l'heure locale Paris.
- */
+/** Returns the schedule profile for today: "WEEKDAY" | "SATURDAY" | "SUNDAY". */
 function todayProfile() {
   const wd = new Intl.DateTimeFormat("fr-FR", {
     timeZone: "Europe/Paris",
@@ -99,9 +100,7 @@ function todayProfile() {
   return "WEEKDAY";
 }
 
-/**
- * Charge schedules.json (une fois par session), retourne l'objet ou null.
- */
+/** Loads schedules.json once per session. Returns the parsed object or null. */
 async function loadSchedules() {
   if (_schedulesCache !== null) return _schedulesCache;
   try {
@@ -117,26 +116,21 @@ async function loadSchedules() {
 }
 
 /**
- * Retourne les minutes jusqu'au prochain départ théorique pour
- * (stopNorm, lineCode, direction) à partir de maintenant.
- * Retourne null si aucune donnée.
+ * Returns the minutes until the next scheduled departure for a given
+ * (stop, line, direction) based on static GTFS timetables.
+ * Returns null if no data is available.
  */
 async function nextTheoreticalMinutes(stopNorm, lineCode, direction) {
   const data = await loadSchedules();
-  if (!data || !data.stops) return null;
+  if (!data?.stops) return null;
 
-  const stopEntry = data.stops[stopNorm];
-  if (!stopEntry) return null;
-  const lineEntry = stopEntry[lineCode];
-  if (!lineEntry) return null;
-  const dirEntry = lineEntry[direction];
+  const dirEntry = data.stops[stopNorm]?.[lineCode]?.[direction];
   if (!dirEntry) return null;
 
-  const profile = todayProfile();
-  const times = dirEntry[profile];
+  const times = dirEntry[todayProfile()];
   if (!Array.isArray(times) || times.length === 0) return null;
 
-  // Heure actuelle en minutes depuis minuit (Paris)
+  // Current time in minutes since midnight (Europe/Paris)
   const nowStr = new Intl.DateTimeFormat("fr-FR", {
     timeZone: "Europe/Paris",
     hour: "2-digit",
@@ -146,21 +140,19 @@ async function nextTheoreticalMinutes(stopNorm, lineCode, direction) {
   const [hh, mm] = nowStr.split(":").map(Number);
   const nowMins = hh * 60 + mm;
 
-  // times[] est trié, contient des entiers (minutes depuis minuit)
-  // Trouver le premier temps >= nowMins
-  let next = times.find((t) => t >= nowMins);
-  if (next === undefined) next = times[0]; // premier bus du lendemain
-
+  // times[] is sorted; find the first departure >= now, or wrap to tomorrow
+  const next = times.find((t) => t >= nowMins) ?? times[0];
   return next >= nowMins ? next - nowMins : (next + 1440) - nowMins;
 }
 
-// ----------------------------------------------------------
+// ── API helpers ────────────────────────────────────────────────────────────────
 
+/** Wraps a value for CQL filter strings, escaping single quotes. */
 function cqlQuote(value) {
   return `'${String(value).replaceAll("'", "''")}'`;
 }
 
-/** Supprime les diacritiques pour les filtres CQL : l'API MEL rejette les accents */
+/** Strips diacritics — the MEL CQL engine rejects accented characters. */
 function noAccents(str) {
   return String(str)
     .normalize("NFD")
@@ -171,6 +163,7 @@ function noAccents(str) {
     .replace(/\u00e6/g, "ae");
 }
 
+/** Builds a full API URL with the given query parameters. */
 function buildUrl(params) {
   const url = new URL(API_URL);
   for (const [key, value] of Object.entries(params)) {
@@ -180,6 +173,7 @@ function buildUrl(params) {
   return url.toString();
 }
 
+/** Fetches JSON with an abort timeout. */
 async function fetchJson(url, timeoutMs = 12000) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
@@ -192,13 +186,12 @@ async function fetchJson(url, timeoutMs = 12000) {
   }
 }
 
-function minutesUntil(isoDateString) {
-  const t = Date.parse(isoDateString);
-  if (!Number.isFinite(t)) return null;
-  const diffMin = (t - Date.now()) / 60000;
-  return Math.max(0, Math.ceil(diffMin));
-}
+// ── Timestamp parsing ──────────────────────────────────────────────────────────
 
+/**
+ * Returns the UTC offset (in minutes) for a given timezone at a specific date.
+ * Used to convert wall-clock timestamps into UTC.
+ */
 function getTimeZoneOffsetMinutes(timeZone, date) {
   const dtf = new Intl.DateTimeFormat("en-US", {
     timeZone,
@@ -210,13 +203,11 @@ function getTimeZoneOffsetMinutes(timeZone, date) {
     minute: "2-digit",
     second: "2-digit",
   });
-
   const parts = dtf.formatToParts(date);
   const map = Object.create(null);
   for (const p of parts) {
     if (p.type !== "literal") map[p.type] = p.value;
   }
-
   const asUTC = Date.UTC(
     Number(map.year),
     Number(map.month) - 1,
@@ -225,81 +216,78 @@ function getTimeZoneOffsetMinutes(timeZone, date) {
     Number(map.minute),
     Number(map.second)
   );
-
   return (asUTC - date.getTime()) / 60000;
 }
 
-function parseIsoLikeAsTimeZone(isoLike, timeZone) {
-  // isoLike: "YYYY-MM-DDTHH:mm:ss(.SSS)(Z|+hh:mm)" -> on ignore le suffixe TZ
+/**
+ * Parses an ISO-like timestamp and interprets it as Europe/Paris wall-clock time,
+ * ignoring any TZ suffix (the MEL API sometimes provides inconsistent offsets).
+ * Returns epoch ms or null.
+ */
+function parseIsoAsParisTime(isoLike) {
   const m = String(isoLike).match(
     /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?(?:Z|[+-]\d{2}:\d{2})?$/
   );
   if (!m) return null;
 
-  const year = Number(m[1]);
-  const month = Number(m[2]);
-  const day = Number(m[3]);
-  const hour = Number(m[4]);
-  const minute = Number(m[5]);
-  const second = Number(m[6]);
-  const ms = m[7] ? Number(m[7].padEnd(3, "0")) : 0;
+  const localAsUTC = Date.UTC(
+    +m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6],
+    m[7] ? +m[7].padEnd(3, "0") : 0
+  );
 
-  // On convertit "wall-clock" Europe/Paris -> UTC en estimant l’offset DST.
-  const localAsUTC = Date.UTC(year, month - 1, day, hour, minute, second, ms);
-  let guess = new Date(localAsUTC);
-  let offset = getTimeZoneOffsetMinutes(timeZone, guess);
+  // First guess at the offset, then refine once (handles DST transitions)
+  let offset = getTimeZoneOffsetMinutes("Europe/Paris", new Date(localAsUTC));
   let utc = localAsUTC - offset * 60000;
-
-  // Recalcule une fois (utile aux dates de bascule DST)
-  guess = new Date(utc);
-  const offset2 = getTimeZoneOffsetMinutes(timeZone, guess);
-  if (offset2 !== offset) {
-    utc = localAsUTC - offset2 * 60000;
-  }
-
+  const offset2 = getTimeZoneOffsetMinutes("Europe/Paris", new Date(utc));
+  if (offset2 !== offset) utc = localAsUTC - offset2 * 60000;
   return utc;
 }
 
+/**
+ * Extracts a timestamp (epoch ms) from the API's `cle_tri` field.
+ * Format: ".../{ISO8601 datetime}" — the most reliable time source.
+ */
 function extractCleTriTimestampMs(cleTri) {
   if (typeof cleTri !== "string") return null;
   const idx = cleTri.lastIndexOf("/");
   if (idx === -1) return null;
-  const tail = cleTri.slice(idx + 1);
-  const t = Date.parse(tail);
+  const t = Date.parse(cleTri.slice(idx + 1));
   return Number.isFinite(t) ? t : null;
 }
 
+/**
+ * Computes the minutes remaining until departure from a single API record.
+ * Tries cle_tri first, then heure_estimee_depart. Returns null on failure.
+ */
 function minutesUntilFromRecord(record) {
   if (!record) return null;
 
-  // `cle_tri` contient souvent un timestamp avec +01/+02 (Paris) -> le plus fiable.
+  // cle_tri contains a reliable timestamp with +01/+02 (Paris)
   const cleTriMs = extractCleTriTimestampMs(record.cle_tri);
   if (cleTriMs !== null) {
-    const diffMin = (cleTriMs - Date.now()) / 60000;
-    return Math.max(0, Math.ceil(diffMin));
+    return Math.max(0, Math.ceil((cleTriMs - Date.now()) / 60000));
   }
 
   if (typeof record.heure_estimee_depart === "string") {
-    // L’API a parfois un suffixe TZ incohérent; on force Europe/Paris.
-    const tzMs = parseIsoLikeAsTimeZone(record.heure_estimee_depart, "Europe/Paris");
+    const tzMs = parseIsoAsParisTime(record.heure_estimee_depart);
     if (tzMs !== null) {
-      const diffMin = (tzMs - Date.now()) / 60000;
-      return Math.max(0, Math.ceil(diffMin));
+      return Math.max(0, Math.ceil((tzMs - Date.now()) / 60000));
     }
-
-    return minutesUntil(record.heure_estimee_depart);
+    // Last resort: try native Date.parse
+    const t = Date.parse(record.heure_estimee_depart);
+    if (Number.isFinite(t)) return Math.max(0, Math.ceil((t - Date.now()) / 60000));
   }
 
   return null;
 }
 
-// ---------- Badge visuel (couleur + respiration live) ----------
+// ── Badge visuals (color + breathing animation) ────────────────────────────────
 
 /**
- * Palette de couleurs selon les minutes restantes (données live uniquement).
- *   > 5 min  -> bleu   (#1976d2) — normal
- *   2-5 min  -> orange (#e65100) — vigilance
- *   0-1 min  -> rouge  (#c62828) — imminent
+ * Badge color palette based on minutes remaining (live data only):
+ *   > 5 min  → blue   (#1976d2)
+ *   2–5 min  → orange (#e65100)
+ *   0–1 min  → red    (#c62828)
  */
 function badgeColor(minutes) {
   if (minutes <= 1) return { r: 198, g: 40,  b: 40  };
@@ -308,7 +296,7 @@ function badgeColor(minutes) {
 }
 
 function colorToHex({ r, g, b }) {
-  return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+  return "#" + [r, g, b].map((c) => c.toString(16).padStart(2, "0")).join("");
 }
 
 function lerpColor(a, b, t) {
@@ -319,38 +307,43 @@ function lerpColor(a, b, t) {
   };
 }
 
-const WHITE = { r: 255, g: 255, b: 255 };
+const WHITE     = { r: 255, g: 255, b: 255 };
+const DARK_TEXT = { r: 30,  g: 30,  b: 50  };
 
-/** Etat de l'animation */
+// Animation state
 let _isLive          = false;
 let _lastLiveMinutes = null;
 let _breatheTimer    = null;
 let _breathePhase    = 0;
-let _boostAmount     = 0; // amplitude bonus apres un refresh, s'estompe
+let _boostAmount     = 0;
 
 /**
- * Respiration continue douce :
- * - Cycle de 3s (sinusoidal) — rythme agreable, ni trop rapide ni trop lent
- * - Tick toutes les 50ms — fluide sans etre gourmand
- * - Amplitude de base selon urgence (subtile)
- * - Boost temporaire au refresh (+0.25) qui s'estompe en ~2s
+ * Continuous breathing animation:
+ *   - 3 s sinusoidal cycle — smooth, pleasant rhythm
+ *   - 50 ms ticks — fluid without being CPU-heavy
+ *   - Base amplitude depends on urgency (subtle)
+ *   - Temporary boost (+0.25) on each successful refresh, fading over ~2 s
+ *   - Both background and text color breathe in sync (text darkens as bg lightens)
  */
 const BREATHE_TICK_MS   = 50;
 const BREATHE_PERIOD_MS = 3000;
 const BREATHE_STEP      = (2 * Math.PI * BREATHE_TICK_MS) / BREATHE_PERIOD_MS;
-const BOOST_DECAY        = 0.012; // perte de boost par tick (~2s pour revenir a 0)
+const BOOST_DECAY       = 0.012;
 
+/** Base breathing amplitude by urgency. */
 function breatheAmplitude(minutes) {
   if (minutes <= 1) return 0.30;
   if (minutes <= 5) return 0.18;
   return 0.10;
 }
 
+/** Checks if the user has enabled the glow effect in preferences. */
 async function glowEnabled() {
   const { [STORAGE_KEYS.prefs]: prefs } = await chrome.storage.local.get([STORAGE_KEYS.prefs]);
   return prefs?.glowEnabled !== false;
 }
 
+/** Starts the continuous breathing loop (idempotent). */
 function startBreatheLoop() {
   if (_breatheTimer !== null) return;
   _breathePhase = 0;
@@ -362,31 +355,26 @@ function startBreatheLoop() {
     _breathePhase += BREATHE_STEP;
     if (_breathePhase > 2 * Math.PI) _breathePhase -= 2 * Math.PI;
 
-    // Estompe le boost progressivement
     if (_boostAmount > 0) _boostAmount = Math.max(0, _boostAmount - BOOST_DECAY);
 
-    // Intensite sinusoidale douce [0, 1]
-    const wave = (1 - Math.cos(_breathePhase)) / 2;
+    const wave      = (1 - Math.cos(_breathePhase)) / 2;
     const amplitude = breatheAmplitude(_lastLiveMinutes) + _boostAmount;
-
-    const base  = badgeColor(_lastLiveMinutes);
-    const mixed = lerpColor(base, WHITE, wave * amplitude);
-
-    // Texte : quand le fond s'éclaircit, le texte s'assombrit pour garder le contraste
-    // Au repos (wave=0) : blanc pur. Au pic (wave=1) : gris foncé proportionnel à l'amplitude
-    const DARK_TEXT = { r: 30, g: 30, b: 50 };
-    const textColor = lerpColor(WHITE, DARK_TEXT, wave * amplitude);
+    const base      = badgeColor(_lastLiveMinutes);
+    const bgColor   = lerpColor(base, WHITE, wave * amplitude);
+    const txtColor  = lerpColor(WHITE, DARK_TEXT, wave * amplitude);
 
     try {
-      chrome.action.setBadgeBackgroundColor({ color: colorToHex(mixed) });
-      chrome.action.setBadgeTextColor({ color: colorToHex(textColor) });
+      chrome.action.setBadgeBackgroundColor({ color: colorToHex(bgColor) });
+      chrome.action.setBadgeTextColor({ color: colorToHex(txtColor) });
     } catch (_) {
+      // Service worker is being terminated — stop gracefully
       clearInterval(_breatheTimer);
       _breatheTimer = null;
     }
   }, BREATHE_TICK_MS);
 }
 
+/** Stops the breathing loop. */
 function stopBreatheLoop() {
   if (_breatheTimer !== null) {
     clearInterval(_breatheTimer);
@@ -394,36 +382,37 @@ function stopBreatheLoop() {
   }
 }
 
-/** Appele apres chaque refresh live reussi — donne un boost temporaire */
+/** Called after each successful live refresh — gives a temporary brightness boost. */
 function triggerRefreshFlash() {
   _boostAmount = 0.25;
 }
 
-// Demarre l'animation des le chargement du service worker
 startBreatheLoop();
 
 async function setBadge(text) {
   await chrome.action.setBadgeText({ text });
 }
 
+// ── Direction matching ─────────────────────────────────────────────────────────
+
 /**
- * L'API MEL renvoie sens_ligne souvent abrégé ou différent du headsign GTFS.
- * Exemples de mismatches connus :
- *   'MARCQ FERME AUX OIES'        -> 'MARCQ EN BAROEUL FERME AUX OIES'
- *   'FACHES CENTRE COMMERCIAL'    -> 'FACHES THUMESNIL CTRE COMMERCIAL'
- *   'MARQUETTE LES VOILES'        -> 'MARQUETTE LEZ LILLE LES VOILES'
- *   "VILLENEUVE D'ASCQ ..."       -> 'VILLENEUVE D ASCQ ...'
+ * Fuzzy-matches the API's `sens_ligne` against the GTFS trip headsign.
  *
- * Stratégie : normaliser (apostrophes, tirets -> espace) puis vérifier
- * que tous les mots significatifs (≥4 lettres) du sens_ligne API sont présents
- * dans la direction GTFS.
+ * The MEL API often abbreviates or reformats direction names compared to GTFS:
+ *   "MARCQ FERME AUX OIES"     vs "MARCQ EN BAROEUL FERME AUX OIES"
+ *   "FACHES CENTRE COMMERCIAL"  vs "FACHES THUMESNIL CTRE COMMERCIAL"
+ *   "VILLENEUVE D'ASCQ ..."    vs "VILLENEUVE D ASCQ ..."
+ *
+ * Strategy: normalize both strings (strip accents, apostrophes, abbreviations)
+ * then check that every significant word (≥ 4 chars) from the API value exists
+ * in the GTFS headsign (with prefix tolerance for abbreviations like CTRE/CENTRE).
  */
 function directionMatches(sens, gtfsDir) {
   if (!sens || !gtfsDir) return false;
   if (sens === gtfsDir) return true;
 
   const norm = (s) => noAccents(s)
-    .replace(/[''\-]/g, " ")
+    .replace(/['''-]/g, " ")
     .replace(/\./g, "")
     .toUpperCase()
     .replace(/\bCENTRE\b/g, "CTRE")
@@ -434,7 +423,6 @@ function directionMatches(sens, gtfsDir) {
 
   const sensWords = norm(sens);
   const gtfsWords = new Set(norm(gtfsDir));
-
   const significant = sensWords.filter((w) => w.length >= 4);
   if (significant.length === 0) return false;
 
@@ -443,48 +431,46 @@ function directionMatches(sens, gtfsDir) {
   );
 }
 
+// ── Core fetch logic ───────────────────────────────────────────────────────────
+
+/**
+ * Fetches the best (minimum) minutes until departure for a list of watchers.
+ *
+ * For each watcher:
+ *   1. If GTFS stop IDs are available, uses `identifiant_station` for reliable matching
+ *   2. Otherwise, falls back to fuzzy nom_station + sens_ligne matching
+ *   3. If the live API fails, returns the next scheduled departure from schedules.json
+ *
+ * @returns {{ best: number|null, isLive: boolean, perWatcher: Array }}
+ */
 async function fetchBestMinutes(watcherList) {
-  if (!watcherList || watcherList.length === 0) return { best: null, isLive: false, perWatcher: [] };
+  if (!watcherList || watcherList.length === 0) {
+    return { best: null, isLive: false, perWatcher: [] };
+  }
 
   const perWatcher = await Promise.all(watcherList.map(async (w) => {
     try {
-      let filter;
       const stopIds = Array.isArray(w.stopIds) && w.stopIds.length > 0 ? w.stopIds : null;
+      let filter;
 
       if (stopIds) {
-        // Matching fiable par identifiant_station
-        // Format API : ILEVIA:StopPoint:BP:{stop_id}:LOC
+        // Reliable matching via GTFS stop_id → API identifiant_station
         const fullIds = stopIds.map((id) => `ILEVIA:StopPoint:BP:${id}:LOC`);
-        const inList = fullIds.map(cqlQuote).join(",");
-        filter = `identifiant_station IN (${inList})`;
+        filter = `identifiant_station IN (${fullIds.map(cqlQuote).join(",")})`;
       } else {
-        // Fallback ancien matching par nom_station + fuzzy sens_ligne
-        const nameNorm = noAccents(w.stopName).toUpperCase();
-        filter = `nom_station LIKE ${cqlQuote("%" + nameNorm)}`;
+        // Legacy fallback: fuzzy match on station name
+        filter = `nom_station LIKE ${cqlQuote("%" + noAccents(w.stopName).toUpperCase())}`;
       }
 
-      const url      = buildUrl({ limit: 200, filter });
-      const json     = await fetchJson(url);
-      const records  = Array.isArray(json.records) ? json.records : [];
+      const json    = await fetchJson(buildUrl({ limit: 200, filter }));
+      const records = Array.isArray(json.records) ? json.records : [];
 
-      let matches;
-      if (stopIds) {
-        // Avec stopIds, on sait que identifiant_station est déjà filtré —
-        // on vérifie juste code_ligne par sécurité
-        matches = records.filter(
-          (r) => r &&
-            r.code_ligne === w.lineCode &&
-            (typeof r.heure_estimee_depart === "string" || typeof r.cle_tri === "string")
-        );
-      } else {
-        // Ancien fallback : fuzzy match sur sens_ligne
-        matches = records.filter(
-          (r) => r &&
-            r.code_ligne === w.lineCode &&
-            directionMatches(r.sens_ligne, w.direction) &&
-            (typeof r.heure_estimee_depart === "string" || typeof r.cle_tri === "string")
-        );
-      }
+      const matches = records.filter((r) => {
+        if (!r || r.code_ligne !== w.lineCode) return false;
+        if (typeof r.heure_estimee_depart !== "string" && typeof r.cle_tri !== "string") return false;
+        // With stopIds the filter is already precise; without them we need fuzzy direction check
+        return stopIds ? true : directionMatches(r.sens_ligne, w.direction);
+      });
 
       let best = null;
       for (const r of matches) {
@@ -492,38 +478,42 @@ async function fetchBestMinutes(watcherList) {
         if (m !== null && (best === null || m < best)) best = m;
       }
       if (best !== null) return { minutes: best, isLive: true };
-    } catch (_) { /* réseau indisponible */ }
+    } catch (_) {
+      // Network unavailable — fall through to theoretical
+    }
 
-    // Fallback théorique pour ce watcher
     const theo = await nextTheoreticalMinutes(w.stopName, w.lineCode, w.direction).catch(() => null);
     return { minutes: theo, isLive: false };
   }));
 
-  // Meilleur live global
+  // Pick the global best across all watchers (prefer live over theoretical)
   let bestLive = null;
-  for (const r of perWatcher) {
-    if (r.isLive && r.minutes !== null && (bestLive === null || r.minutes < bestLive)) bestLive = r.minutes;
-  }
-  if (bestLive !== null) return { best: bestLive, isLive: true, perWatcher };
-
-  // Meilleur théorique global
   let bestTheo = null;
   for (const r of perWatcher) {
-    if (!r.isLive && r.minutes !== null && (bestTheo === null || r.minutes < bestTheo)) bestTheo = r.minutes;
+    if (r.minutes === null) continue;
+    if (r.isLive && (bestLive === null || r.minutes < bestLive)) bestLive = r.minutes;
+    if (!r.isLive && (bestTheo === null || r.minutes < bestTheo)) bestTheo = r.minutes;
   }
+  if (bestLive !== null) return { best: bestLive, isLive: true, perWatcher };
   return { best: bestTheo, isLive: false, perWatcher };
 }
 
+// ── Badge refresh ──────────────────────────────────────────────────────────────
+
+/**
+ * Main refresh cycle. Fetches live data for all watchers, updates the badge,
+ * and persists per-watcher results for the popup to read.
+ */
 async function refreshBadge() {
   if (_isPaused) {
-    await applyPausedBadge();
+    applyPausedBadge();
     return;
   }
 
   const stored = await chrome.storage.local.get([STORAGE_KEYS.watchers, STORAGE_KEYS.selection]);
   let watcherList = Array.isArray(stored[STORAGE_KEYS.watchers]) ? stored[STORAGE_KEYS.watchers] : null;
 
-  // Migration / compatibilité : seulement si la clé watchers n'existe pas du tout
+  // Migration: if the new "watchers" key doesn't exist yet, try the legacy "selection" key
   if (watcherList === null) {
     const sel = stored[STORAGE_KEYS.selection];
     if (sel?.stopName && sel?.lineCode && sel?.direction) {
@@ -544,8 +534,6 @@ async function refreshBadge() {
 
   try {
     const { best, isLive, perWatcher } = await fetchBestMinutes(watcherList);
-
-    // Persiste les résultats individuels pour la popup
     await chrome.storage.local.set({ [STORAGE_KEYS.watcherResults]: perWatcher });
 
     if (!isLive || best === null) {
@@ -562,33 +550,35 @@ async function refreshBadge() {
     await chrome.action.setBadgeBackgroundColor({ color: colorToHex(badgeColor(best)) });
     await chrome.action.setBadgeTextColor({ color: "#FFFFFF" });
     await setBadge(best > 99 ? "99+" : String(best));
-    // Flash visuel pour indiquer que la donnée vient d'être actualisée
     triggerRefreshFlash();
   } catch (e) {
-    console.error("refreshBadge failed", e);
+    console.error("refreshBadge failed:", e);
     _isLive = false;
     _lastLiveMinutes = null;
     await setBadge("!");
   }
 }
 
-// ---------- Détection popup ouverte via port ----------
-// La popup ouvre un port "popup" à l'init. Tant qu'il est connecté,
-// l'alarme ignore ses ticks (la popup pilote les refresh via badge:refresh).
-// Quand la popup se ferme, le port se déconnecte automatiquement → l'alarme reprend.
+// ── Popup connection tracking ──────────────────────────────────────────────────
+
+/**
+ * The popup opens a persistent port ("popup") on init. While connected, the alarm
+ * skips its ticks (the popup drives refresh via "badge:refresh" messages).
+ * When the popup closes, the port disconnects automatically and the alarm resumes.
+ */
 let _popupConnected = false;
 
 chrome.runtime.onConnect.addListener((port) => {
   if (port.name !== "popup") return;
   _popupConnected = true;
-  port.onDisconnect.addListener(() => {
-    _popupConnected = false;
-  });
+  port.onDisconnect.addListener(() => { _popupConnected = false; });
 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm?.name === "refresh-badge" && !_popupConnected) refreshBadge();
 });
+
+// ── Message handlers ───────────────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (!message || typeof message !== "object") return;
@@ -606,18 +596,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 
-  if (message.type === "selection:set" && message.selection) {
-    chrome.storage.local
-      .set({ [STORAGE_KEYS.selection]: message.selection })
-      .then(() => refreshBadge())
-      .then(() => sendResponse({ ok: true }))
-      .catch((e) => {
-        console.error(e);
-        sendResponse({ ok: false, error: String(e) });
-      });
-    return true;
-  }
-
   if (message.type === "badge:refresh") {
     refreshBadge()
       .then(() => sendResponse({ ok: true }))
@@ -628,7 +606,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === "badge:pause") {
     const paused = message.paused === true;
     _isPaused = paused;
-    if (!paused) stopPauseAnimation();
     chrome.storage.local.set({ [STORAGE_KEYS.paused]: paused })
       .then(() => paused ? applyPausedBadge() : refreshBadge())
       .then(() => sendResponse({ ok: true }))
@@ -645,5 +622,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 });
 
-// Premier rafraîchissement au chargement du service worker
+// ── Bootstrap ──────────────────────────────────────────────────────────────────
+
 loadPausedState().then(() => _isPaused ? applyPausedBadge() : refreshBadge());
