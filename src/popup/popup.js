@@ -403,19 +403,19 @@ async function saveWatchers() {
   await chrome.storage.local.set({ [STORAGE_KEYS.watchers]: watchers });
   if (watchers.length === 0) {
     await chrome.storage.local.remove([STORAGE_KEYS.selection]);
+    // Notifie le service worker pour qu'il nettoie badge + résultats (sans refetch)
+    await chrome.runtime.sendMessage({ type: "watchers:clear" }).catch(() => {});
   }
-  await chrome.runtime.sendMessage({ type: "watchers:set", watchers }).catch(() => {});
 }
 
 /**
- * Demande un refresh au service worker, attend qu'il ait fini d'écrire
- * watcherResults dans le storage, puis met à jour l'affichage.
- * Garantit que les badges temps ne passent jamais par "…" inutilement.
+ * Demande un refresh au service worker (1 seul appel API par watcher),
+ * puis met à jour in-place les badges de temps dans la popup.
+ * Pas de destruction/reconstruction du DOM, pas de double appel.
  */
 async function refreshAndRender() {
   await chrome.runtime.sendMessage({ type: "badge:refresh" }).catch(() => {});
   await renderWatchers();
-  await showNextMinutes();
 }
 
 /** Retourne l'urgence CSS d'un nombre de minutes live ou théorique */
@@ -443,78 +443,108 @@ function setWatcherTimeBadge(badge, minutes, isLive) {
   }
 }
 
+/** Signature des watchers actuellement affichés — sert à détecter si on doit reconstruire le DOM */
+let _renderedWatchersSig = "";
+
+function watchersSig(list) {
+  return list.map((w) => `${w.stopName}|${w.lineCode}|${w.direction}`).join(";;");
+}
+
+/**
+ * Construit ou met à jour la liste des watchers.
+ * - Reconstruit le DOM uniquement si la composition a changé (ajout/suppression)
+ * - Sinon, met à jour les badges de temps in-place (pas de flash)
+ */
 async function renderWatchers() {
-  el.watchersList.innerHTML = "";
   show(el.watchersSection, watchers.length > 0);
-  if (watchers.length === 0) return;
+  if (watchers.length === 0) {
+    el.watchersList.innerHTML = "";
+    _renderedWatchersSig = "";
+    return;
+  }
+
+  const newSig = watchersSig(watchers);
+  const structureChanged = (newSig !== _renderedWatchersSig);
 
   // Lit les résultats déjà calculés par le service worker (0 appel API)
   const { [STORAGE_KEYS.watcherResults]: stored } =
     await chrome.storage.local.get([STORAGE_KEYS.watcherResults]);
   const results = Array.isArray(stored) ? stored : [];
 
-  for (let i = 0; i < watchers.length; i++) {
-    const w  = watchers[i];
-    const li = document.createElement("li");
-    li.className = "watcherItem";
+  if (structureChanged) {
+    // Reconstruction complète du DOM
+    el.watchersList.innerHTML = "";
+    _renderedWatchersSig = newSig;
 
-    // Col 1 — pill ligne
-    const pill = document.createElement("span");
-    pill.className = "linePill watcherPill";
-    pill.textContent = w.lineCode;
-    const colors = lineColors[w.lineCode.toUpperCase()];
-    if (colors?.bg) pill.style.backgroundColor = colors.bg;
-    if (colors?.fg) pill.style.color           = colors.fg;
-    li.appendChild(pill);
+    for (let i = 0; i < watchers.length; i++) {
+      const w  = watchers[i];
+      const li = document.createElement("li");
+      li.className = "watcherItem";
+      li.dataset.idx = String(i);
 
-    // Col 2 — arrêt + direction
-    const stopEl = document.createElement("span");
-    stopEl.className   = "watcherStop";
-    stopEl.textContent = toDisplayName(w.stopName);
-    stopEl.title       = toDisplayName(w.stopName);
-    li.appendChild(stopEl);
+      // Col 1 — pill ligne
+      const pill = document.createElement("span");
+      pill.className = "linePill watcherPill";
+      pill.textContent = w.lineCode;
+      const colors = lineColors[w.lineCode.toUpperCase()];
+      if (colors?.bg) pill.style.backgroundColor = colors.bg;
+      if (colors?.fg) pill.style.color           = colors.fg;
+      li.appendChild(pill);
 
-    const dirEl = document.createElement("span");
-    dirEl.className   = "watcherDir";
-    dirEl.textContent = `→ ${w.direction}`;
-    dirEl.title       = w.direction;
-    li.appendChild(dirEl);
+      // Col 2 — arrêt + direction
+      const stopEl = document.createElement("span");
+      stopEl.className   = "watcherStop";
+      stopEl.textContent = toDisplayName(w.stopName);
+      stopEl.title       = toDisplayName(w.stopName);
+      li.appendChild(stopEl);
 
-    // Col 3 — badge temps
-    const right = document.createElement("div");
-    right.className = "watcherRight";
+      const dirEl = document.createElement("span");
+      dirEl.className   = "watcherDir";
+      dirEl.textContent = `→ ${w.direction}`;
+      dirEl.title       = w.direction;
+      li.appendChild(dirEl);
 
-    const timeBadge = document.createElement("span");
-    timeBadge.className = "watcherTime";
+      // Col 3 — badge temps
+      const right = document.createElement("div");
+      right.className = "watcherRight";
+      const timeBadge = document.createElement("span");
+      timeBadge.className = "watcherTime";
+      timeBadge.dataset.watcherTime = String(i);
+      right.appendChild(timeBadge);
+      li.appendChild(right);
+
+      // Bouton × — positionné en absolu haut-droite de l'item
+      const rm = document.createElement("button");
+      rm.className   = "watcherRemove";
+      rm.type        = "button";
+      rm.textContent = "×";
+      rm.setAttribute("aria-label", "Supprimer");
+      rm.addEventListener("click", async () => {
+        watchers.splice(i, 1);
+        await saveWatchers();
+        await renderWatchers();
+      });
+      li.appendChild(rm);
+
+      el.watchersList.appendChild(li);
+    }
+  }
+
+  // Mise à jour in-place des badges de temps (pas de reconstruction DOM)
+  const badges = el.watchersList.querySelectorAll("[data-watcher-time]");
+  for (const badge of badges) {
+    const idx = parseInt(badge.dataset.watcherTime, 10);
     if (isPaused) {
-      timeBadge.dataset.urgency = "theoretical";
-      timeBadge.innerHTML = `<span>II</span>`;
+      badge.dataset.urgency = "theoretical";
+      badge.innerHTML = `<span>II</span>`;
     } else {
-      const res = results[i] ?? null;
+      const res = results[idx] ?? null;
       if (res) {
-        setWatcherTimeBadge(timeBadge, res.minutes, res.isLive);
+        setWatcherTimeBadge(badge, res.minutes, res.isLive);
       } else {
-        timeBadge.innerHTML = `<span>…</span>`;
+        badge.innerHTML = `<span>…</span>`;
       }
     }
-    right.appendChild(timeBadge);
-    li.appendChild(right);
-
-    // Bouton × — positionné en absolu haut-droite de l'item
-    const rm = document.createElement("button");
-    rm.className   = "watcherRemove";
-    rm.type        = "button";
-    rm.textContent = "×";
-    rm.setAttribute("aria-label", "Supprimer");
-    rm.addEventListener("click", async () => {
-      watchers.splice(i, 1);
-      await saveWatchers();
-      await renderWatchers();
-      await showNextMinutes();
-    });
-    li.appendChild(rm);
-
-    el.watchersList.appendChild(li);
   }
 }
 
@@ -826,8 +856,10 @@ async function init() {
   }
 
   // --- Auto-refresh de la popup ---
-  // Délègue entièrement au service worker : envoie badge:refresh,
-  // puis lit watcherResults depuis le storage. Zéro fetch dupliqué.
+  // La popup prend le contrôle du refresh : on suspend l'alarme du SW
+  // pour éviter les doubles appels. Elle est réactivée à la fermeture.
+  await chrome.runtime.sendMessage({ type: "popup:opened" }).catch(() => {});
+
   const REFRESH_STEPS_MS   = [5000, 10000, 15000, 30000, 60000];
   const DEFAULT_REFRESH_MS = 30000;
   const { [STORAGE_KEYS.prefs]: prefsStored } =
@@ -842,7 +874,11 @@ async function init() {
     await refreshAndRender();
   }, intervalMs);
 
-  window.addEventListener("unload", () => clearInterval(popupRefreshTimer));
+  window.addEventListener("unload", () => {
+    clearInterval(popupRefreshTimer);
+    // Réactive l'alarme du SW quand la popup se ferme
+    chrome.runtime.sendMessage({ type: "popup:closed" }).catch(() => {});
+  });
 
   el.stopSearch.addEventListener("input", onStopInput);
   el.validateBtn.addEventListener("click", validateSelection);
@@ -875,7 +911,6 @@ async function init() {
     await chrome.runtime.sendMessage({ type: "badge:pause", paused: isPaused });
     // Met à jour la popup immédiatement sans attendre l'intervalle
     await renderWatchers();
-    await showNextMinutes();
   });
 }
 

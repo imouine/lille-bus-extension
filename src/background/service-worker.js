@@ -556,25 +556,16 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (!message || typeof message !== "object") return;
 
-  if (message.type === "watchers:set" && Array.isArray(message.watchers)) {
-    const list = message.watchers;
-    if (list.length === 0) {
-      // Plus aucun watcher : on nettoie tout
-      _isLive = false;
-      _lastLiveMinutes = null;
-      chrome.storage.local
-        .set({ [STORAGE_KEYS.watchers]: [], [STORAGE_KEYS.watcherResults]: [] })
-        .then(() => chrome.action.setBadgeBackgroundColor({ color: "#757575" }))
-        .then(() => chrome.action.setBadgeText({ text: "…" }))
-        .then(() => sendResponse({ ok: true }))
-        .catch((e) => sendResponse({ ok: false, error: String(e) }));
-    } else {
-      chrome.storage.local
-        .set({ [STORAGE_KEYS.watchers]: list })
-        .then(() => refreshBadge())
-        .then(() => sendResponse({ ok: true }))
-        .catch((e) => sendResponse({ ok: false, error: String(e) }));
-    }
+  if (message.type === "watchers:clear") {
+    // Plus aucun watcher : on nettoie tout (pas de refetch)
+    _isLive = false;
+    _lastLiveMinutes = null;
+    chrome.storage.local
+      .set({ [STORAGE_KEYS.watchers]: [], [STORAGE_KEYS.watcherResults]: [] })
+      .then(() => chrome.action.setBadgeBackgroundColor({ color: "#757575" }))
+      .then(() => chrome.action.setBadgeText({ text: "…" }))
+      .then(() => sendResponse({ ok: true }))
+      .catch((e) => sendResponse({ ok: false, error: String(e) }));
     return true;
   }
 
@@ -611,6 +602,23 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === "prefs:refreshInterval" && typeof message.periodInMinutes === "number") {
     resetAlarm(message.periodInMinutes)
       .then(() => refreshBadge())
+      .then(() => sendResponse({ ok: true }))
+      .catch((e) => sendResponse({ ok: false, error: String(e) }));
+    return true;
+  }
+
+  // La popup prend le contrôle du refresh quand elle est ouverte.
+  // On suspend l'alarme pour éviter les doubles appels API.
+  if (message.type === "popup:opened") {
+    chrome.alarms.clear("refresh-badge")
+      .then(() => sendResponse({ ok: true }))
+      .catch((e) => sendResponse({ ok: false, error: String(e) }));
+    return true;
+  }
+
+  if (message.type === "popup:closed") {
+    getRefreshPeriod()
+      .then((period) => chrome.alarms.create("refresh-badge", { periodInMinutes: period }))
       .then(() => sendResponse({ ok: true }))
       .catch((e) => sendResponse({ ok: false, error: String(e) }));
     return true;
