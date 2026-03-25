@@ -257,7 +257,7 @@ function directionMatches(sens, gtfsDir) {
   if (!sens || !gtfsDir) return false;
   if (sens === gtfsDir) return true;
 
-  const norm = (s) => s
+  const norm = (s) => noAccents(s)
     .replace(/[''\-]/g, " ")
     .replace(/\./g, "")
     .toUpperCase()
@@ -289,8 +289,10 @@ async function refreshBadge() {
   }
 
   try {
-    // stopName est déjà en UPPER sans accents (clé schedules.json)
-    const filter = `nom_station=${cqlQuote(noAccents(selection.stopName).toUpperCase())}`;
+    // L'API MEL prefixe souvent les noms avec la ville ("LILLE PORTE DES POSTES"
+    // au lieu de "PORTE DES POSTES"). On utilise LIKE '%NOM' pour couvrir les deux cas.
+    const nameNorm = noAccents(selection.stopName).toUpperCase();
+    const filter = `nom_station LIKE ${cqlQuote("%" + nameNorm)}`;
     const url = buildUrl({ limit: 200, filter });
     const json = await fetchJson(url);
     const records = Array.isArray(json.records) ? json.records : [];

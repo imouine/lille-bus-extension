@@ -261,7 +261,7 @@ function minutesFromRecord(record) {
  *   'MARQUETTE LES VOILES'        -> 'MARQUETTE LEZ LILLE LES VOILES'
  *   "VILLENEUVE D'ASCQ ..."       -> 'VILLENEUVE D ASCQ ...'
  *
- * Stratégie : normaliser (apostrophes, accents, tirets -> espace) puis vérifier
+ * Stratégie : normaliser (accents, apostrophes, tirets -> espace) puis vérifier
  * que tous les mots significatifs (≥4 lettres) du sens_ligne API sont présents
  * dans la direction GTFS.
  */
@@ -269,8 +269,8 @@ function directionMatches(sens, gtfsDir) {
   if (!sens || !gtfsDir) return false;
   if (sens === gtfsDir) return true;
 
-  // Normalise : apostrophes/tirets -> espace, abréviations, puis split en mots
-  const norm = (s) => s
+  // Normalise : accents, apostrophes/tirets -> espace, abréviations, puis split en mots
+  const norm = (s) => noAccents(s)
     .replace(/[''\-]/g, " ")
     .replace(/\./g, "")
     .toUpperCase()
@@ -295,7 +295,10 @@ function directionMatches(sens, gtfsDir) {
 }
 
 async function fetchLiveMinutes(stopNorm, lineCode, direction) {
-  const filter = `nom_station=${cqlQuote(noAccents(stopNorm).toUpperCase())}`;
+  // L'API MEL prefixe souvent les noms avec la ville ("LILLE PORTE DES POSTES"
+  // au lieu de "PORTE DES POSTES"). On utilise LIKE '%NOM' pour couvrir les deux cas.
+  const nameNorm = noAccents(stopNorm).toUpperCase();
+  const filter = `nom_station LIKE ${cqlQuote("%" + nameNorm)}`;
   const url = new URL(LIVE_API_URL);
   url.searchParams.set("limit", "200");
   url.searchParams.set("filter", filter);
