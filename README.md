@@ -8,6 +8,7 @@
   ![Manifest V3](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?logo=googlechrome&logoColor=white)
   ![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue)
   ![MEL Open Data](https://img.shields.io/badge/Data-MEL%20Open%20Data-00a651)
+  ![GTFS Ilévia](https://img.shields.io/badge/GTFS-Ilévia-ff6600)
 
 </div>
 
@@ -114,14 +115,15 @@ scripts/
 
 ## 📡 Data sources
 
-All data comes from the **Métropole Européenne de Lille (MEL) open data platform**:
+All data comes from the **Métropole Européenne de Lille (MEL) open data platform** and the **Ilévia GTFS feed**:
 
-| Collection | Purpose |
-|---|---|
-| `ilevia:prochains_passages` | Real-time next departures (live countdown) |
-| `ilevia:couleurs_lignes` | Official line colors (cached 30 days) |
+| Source | URL | Purpose |
+|---|---|---|
+| `ilevia:prochains_passages` | [MEL Open Data](https://data.lillemetropole.fr) | Real-time next departures (live countdown) |
+| `ilevia:couleurs_lignes` | [MEL Open Data](https://data.lillemetropole.fr) | Official line colors (cached 30 days) |
+| GTFS Feed | [Ilévia GTFS](https://media.ilevia.fr/opendata/gtfs.zip) | Static timetables, stop IDs, routes & trip headsigns |
 
-Static fallback timetables are built from the **public Ilévia GTFS feed** via `scripts/build_schedules.py`.
+Static fallback timetables are built from the **Ilévia GTFS feed** via `scripts/build_schedules.py`. The GTFS data provides stop IDs (`stop_id`) that enable reliable matching with the live API's `identifiant_station`.
 
 ### Matching strategy
 Live departures are matched using the **GTFS `stop_id`** (stored as `_stopIds` in `schedules.json`), translated to the API's `identifiant_station` format (`ILEVIA:StopPoint:BP:{id}:LOC`). This guarantees accurate matching regardless of text differences between the API's `sens_ligne` and the GTFS headsign (e.g. `"JEAN PAUL SARTRE"` vs `"JP SARTRE"`). A fuzzy text fallback is used for legacy watchers that predate the GTFS stop ID enrichment.

@@ -11,67 +11,143 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Lille Bus — Préférences</title>
+    <title>Lille Bus — Preferences</title>
     <link rel="stylesheet" href="options.css" />
   </head>
   <body>
-    <main>
-      <header>
-        <h1>Lille Bus</h1>
-        <p class="subtitle" id="subtitle">Préférences</p>
-      </header>
-
-      <section>
-        <div class="sectionTitle" id="label_appearance">Appearance</div>
-
-        <label class="toggleRow">
-          <span class="toggleText" id="label_theme">Night mode</span>
-          <input id="themeToggle" class="toggleInput" type="checkbox" />
-          <span class="toggleSwitch" aria-hidden="true"></span>
-        </label>
-
-        <label class="toggleRow">
-          <span class="toggleText" id="label_lang">Français</span>
-          <input id="langToggle" class="toggleInput" type="checkbox" />
-          <span class="toggleSwitch" aria-hidden="true"></span>
-        </label>
-      </section>
-
-      <section>
-        <div class="sectionTitle" id="label_refresh_section">Refresh</div>
-
-        <div class="sliderRow">
-          <div class="sliderHeader">
-            <span class="toggleText" id="label_refresh">Refresh interval</span>
-            <span class="sliderValue" id="refreshValue">60s</span>
-          </div>
-          <input
-            id="refreshSlider"
-            class="slider"
-            type="range"
-            min="0"
-            max="4"
-            step="1"
-            value="4"
-          />
-          <div class="sliderTicks" aria-hidden="true">
-            <span>5s</span>
-            <span>10s</span>
-            <span>15s</span>
-            <span>30s</span>
-            <span>60s</span>
+    <div class="page">
+      <aside class="sidebar">
+        <div class="sidebar-brand">
+          <img src="../assets/icons/icon48.png" alt="Lille Bus" class="sidebar-logo" />
+          <div>
+            <div class="sidebar-title">Lille Bus</div>
+            <div class="sidebar-version">v0.1.0</div>
           </div>
         </div>
+        <nav class="sidebar-nav">
+          <a href="#appearance" class="nav-item active" data-section="appearance">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+            <span id="nav_appearance">Appearance</span>
+          </a>
+          <a href="#refresh" class="nav-item" data-section="refresh">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            <span id="nav_refresh">Refresh</span>
+          </a>
+          <a href="#about" class="nav-item" data-section="about">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <span id="nav_about">About</span>
+          </a>
+        </nav>
+      </aside>
 
-        <label class="toggleRow">
-          <span class="toggleText" id="label_glow">Glow effect</span>
-          <input id="glowToggle" class="toggleInput" type="checkbox" checked />
-          <span class="toggleSwitch" aria-hidden="true"></span>
-        </label>
-      </section>
+      <main>
+        <!-- Appearance -->
+        <section id="section-appearance" class="card visible">
+          <h2 class="card-title" id="label_appearance">Appearance</h2>
+          <p class="card-desc" id="desc_appearance">Customize the look and feel of the extension.</p>
 
-      <p class="saved" id="savedMsg"></p>
-    </main>
+          <label class="setting-row">
+            <div class="setting-info">
+              <span class="setting-label" id="label_theme">Night mode</span>
+              <span class="setting-hint" id="hint_theme">Switch between light and dark themes</span>
+            </div>
+            <input id="themeToggle" class="toggleInput" type="checkbox" />
+            <span class="toggle" aria-hidden="true"></span>
+          </label>
+
+          <label class="setting-row last">
+            <div class="setting-info">
+              <span class="setting-label" id="label_lang">English</span>
+              <span class="setting-hint" id="hint_lang">Change the interface language</span>
+            </div>
+            <input id="langToggle" class="toggleInput" type="checkbox" />
+            <span class="toggle" aria-hidden="true"></span>
+          </label>
+        </section>
+
+        <!-- Refresh -->
+        <section id="section-refresh" class="card">
+          <h2 class="card-title" id="label_refresh_section">Refresh</h2>
+          <p class="card-desc" id="desc_refresh">Control how often bus times are updated.</p>
+
+          <div class="setting-row">
+            <div class="setting-info full">
+              <div class="slider-header">
+                <span class="setting-label" id="label_refresh">Refresh interval</span>
+                <span class="slider-badge" id="refreshValue">60s</span>
+              </div>
+              <input id="refreshSlider" class="slider" type="range" min="0" max="4" step="1" value="4" />
+              <div class="slider-ticks" aria-hidden="true">
+                <span>5s</span><span>10s</span><span>15s</span><span>30s</span><span>60s</span>
+              </div>
+            </div>
+          </div>
+
+          <label class="setting-row last">
+            <div class="setting-info">
+              <span class="setting-label" id="label_glow">Glow effect</span>
+              <span class="setting-hint" id="hint_glow">Animate the badge to indicate live data</span>
+            </div>
+            <input id="glowToggle" class="toggleInput" type="checkbox" checked />
+            <span class="toggle" aria-hidden="true"></span>
+          </label>
+        </section>
+
+        <!-- About -->
+        <section id="section-about" class="card">
+          <h2 class="card-title" id="label_about">About</h2>
+          <p class="card-desc" id="desc_about">An open-source extension for Lille Metropole public transport.</p>
+
+          <div class="about-grid">
+            <div class="about-card author-card">
+              <div class="author-avatar">
+                <img src="https://github.com/imouine.png" alt="imouine" class="avatar-img" />
+              </div>
+              <div class="author-info">
+                <span class="author-name">imouine</span>
+                <span class="author-role" id="author_role">Creator &amp; Maintainer</span>
+              </div>
+              <div class="author-links">
+                <a href="https://github.com/imouine" target="_blank" rel="noopener" class="social-link" title="GitHub">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12Z"/></svg>
+                </a>
+                <a href="https://imouine.com" target="_blank" rel="noopener" class="social-link" title="Website">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                </a>
+                <a href="https://x.com/_imouine" target="_blank" rel="noopener" class="social-link" title="X / Twitter">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                </a>
+              </div>
+            </div>
+
+            <div class="about-card meta-card">
+              <div class="meta-row">
+                <span class="meta-label" id="meta_version">Version</span>
+                <span class="meta-value">0.1.0</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-label" id="meta_license">License</span>
+                <span class="meta-value">GPL-3.0</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-label" id="meta_source">Source</span>
+                <a href="https://github.com/imouine/lille-bus-extension" target="_blank" rel="noopener" class="meta-link">GitHub →</a>
+              </div>
+              <div class="meta-row">
+                <span class="meta-label" id="meta_data">Data</span>
+                <a href="https://data.lillemetropole.fr" target="_blank" rel="noopener" class="meta-link">Ilévia Open Data →</a>
+              </div>
+              <div class="meta-row last">
+                <span class="meta-label" id="meta_gtfs">GTFS</span>
+                <a href="https://media.ilevia.fr/opendata/gtfs.zip" target="_blank" rel="noopener" class="meta-link">Ilévia GTFS →</a>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="toast" id="savedMsg"></div>
+      </main>
+    </div>
 
     <script src="options.js"></script>
   </body>
