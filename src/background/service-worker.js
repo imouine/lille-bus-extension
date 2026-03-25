@@ -292,7 +292,7 @@ function minutesUntilFromRecord(record) {
   return null;
 }
 
-// ---------- Badge visuel (couleur + effet de respiration) ----------
+// ---------- Badge visuel (couleur + flash d'actualisation) ----------
 
 /**
  * Palette de couleurs selon les minutes restantes (données live uniquement).
@@ -323,65 +323,88 @@ const WHITE = { r: 255, g: 255, b: 255 };
 /** État de l'animation */
 let _isLive          = false;
 let _lastLiveMinutes = null;
-let _beatTimer       = null;
-let _beatPhase       = 0; // 0..2π, avance à chaque tick
-
-/**
- * Respiration sinusoïdale douce :
- * - Tick toutes les 80 ms
- * - Période complète ~4 s (15 "respirations" par minute)
- * - Courbe : (1 - cos(phase)) / 2  → montée et descente parfaitement symétriques
- *   La valeur reste proche de 0 la plupart du temps et monte doucement au pic.
- */
-const BREATHE_INTERVAL_MS = 80;
-const BREATHE_PERIOD_MS   = 4000;
-const BREATHE_STEP        = (2 * Math.PI * BREATHE_INTERVAL_MS) / BREATHE_PERIOD_MS;
+let _flashTimer      = null;
 
 /**
  * Amplitude du flash selon l'urgence :
- *   > 5 min → très subtil (12 % vers blanc) — à peine perceptible
- *   2–5 min → léger (28 %)
- *   ≤ 1 min → visible (50 %)
+ *   > 5 min → subtil (20 % vers blanc)
+ *   2–5 min → moyen (35 %)
+ *   ≤ 1 min → fort (55 %)
  */
-function breatheAmplitude(minutes) {
-  if (minutes <= 1) return 0.50;
-  if (minutes <= 5) return 0.28;
-  return 0.12;
+function flashAmplitude(minutes) {
+  if (minutes <= 1) return 0.55;
+  if (minutes <= 5) return 0.35;
+  return 0.20;
 }
 
 async function glowEnabled() {
   const { [STORAGE_KEYS.prefs]: prefs } = await chrome.storage.local.get([STORAGE_KEYS.prefs]);
-  // Par défaut activé si la préférence n'existe pas encore
   return prefs?.glowEnabled !== false;
 }
 
-function startBeatLoop() {
-  if (_beatTimer !== null) return;
-  _beatPhase = 0;
-  _beatTimer = setInterval(async () => {
-    if (!_isLive || _lastLiveMinutes === null) return;
-    if (!(await glowEnabled())) return;
+/**
+ * Flash d'actualisation : un pulse unique qui s'éclaircit vers le blanc
+ * puis revient doucement à la couleur de base.
+ *
+ * Durée totale : ~800ms
+ * - Montée rapide (200ms) : couleur de base → pic blanc
+ * - Descente douce (600ms) : pic blanc → couleur de base
+ *
+ * Donne un effet visuel de "ping" à chaque actualisation live,
+ * similaire au dot pulsant (●) dans la popup.
+ */
+const FLASH_TICK_MS    = 30;
+const FLASH_DURATION   = 800;
+const FLASH_RISE_RATIO = 0.25; // 25% montée, 75% descente
 
-    _beatPhase += BREATHE_STEP;
-    // intensité ∈ [0, 1], courbe sinusoïdale douce
-    const intensity = (1 - Math.cos(_beatPhase)) / 2;
-    const amplitude = breatheAmplitude(_lastLiveMinutes);
+async function triggerRefreshFlash() {
+  if (!_isLive || _lastLiveMinutes === null) return;
+  if (!(await glowEnabled())) return;
 
-    const base  = badgeColor(_lastLiveMinutes);
-    const mixed = lerpColor(base, WHITE, intensity * amplitude);
-    chrome.action.setBadgeBackgroundColor({ color: colorToHex(mixed) });
-  }, BREATHE_INTERVAL_MS);
-}
-
-function stopBeatLoop() {
-  if (_beatTimer !== null) {
-    clearInterval(_beatTimer);
-    _beatTimer = null;
+  // Annule un flash précédent en cours
+  if (_flashTimer !== null) {
+    clearInterval(_flashTimer);
+    _flashTimer = null;
   }
-}
 
-// Démarre l'animation dès le chargement du service worker
-startBeatLoop();
+  const base      = badgeColor(_lastLiveMinutes);
+  const amplitude = flashAmplitude(_lastLiveMinutes);
+  const riseEnd   = FLASH_DURATION * FLASH_RISE_RATIO;
+  let elapsed     = 0;
+
+  _flashTimer = setInterval(() => {
+    elapsed += FLASH_TICK_MS;
+
+    let intensity;
+    if (elapsed <= riseEnd) {
+      const t = elapsed / riseEnd;
+      intensity = 1 - (1 - t) * (1 - t);
+    } else {
+      const t = (elapsed - riseEnd) / (FLASH_DURATION - riseEnd);
+      intensity = 1 - t * t;
+    }
+
+    intensity = Math.max(0, Math.min(1, intensity));
+    const mixed = lerpColor(base, WHITE, intensity * amplitude);
+
+    try {
+      chrome.action.setBadgeBackgroundColor({ color: colorToHex(mixed) });
+    } catch (_) {
+      // SW déchargé pendant l'animation — on arrête proprement
+      clearInterval(_flashTimer);
+      _flashTimer = null;
+      return;
+    }
+
+    if (elapsed >= FLASH_DURATION) {
+      clearInterval(_flashTimer);
+      _flashTimer = null;
+      try {
+        chrome.action.setBadgeBackgroundColor({ color: colorToHex(base) });
+      } catch (_) { /* SW déchargé */ }
+    }
+  }, FLASH_TICK_MS);
+}
 
 async function setBadge(text) {
   await chrome.action.setBadgeText({ text });
@@ -538,9 +561,10 @@ async function refreshBadge() {
 
     _lastLiveMinutes = best;
     _isLive = true;
-    _beatPhase = 0;
     await chrome.action.setBadgeBackgroundColor({ color: colorToHex(badgeColor(best)) });
     await setBadge(best > 99 ? "99+" : String(best));
+    // Flash visuel pour indiquer que la donnée vient d'être actualisée
+    triggerRefreshFlash();
   } catch (e) {
     console.error("refreshBadge failed", e);
     _isLive = false;
