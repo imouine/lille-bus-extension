@@ -377,9 +377,16 @@ async function renderWatchers() {
       rm.textContent = "×";
       rm.setAttribute("aria-label", "Remove");
       rm.addEventListener("click", async () => {
+        // Immediately reindex cached results so remaining watchers keep correct times
+        const { [STORAGE_KEYS.watcherResults]: oldResults } =
+          await chrome.storage.local.get([STORAGE_KEYS.watcherResults]);
+        if (Array.isArray(oldResults)) {
+          oldResults.splice(i, 1);
+          await chrome.storage.local.set({ [STORAGE_KEYS.watcherResults]: oldResults });
+        }
         watchers.splice(i, 1);
         await saveWatchers();
-        await renderWatchers();
+        await refreshAndRender();
       });
       li.appendChild(rm);
 
