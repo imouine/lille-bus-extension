@@ -856,9 +856,13 @@ async function init() {
   }
 
   // --- Auto-refresh de la popup ---
-  // La popup prend le contrôle du refresh : on suspend l'alarme du SW
-  // pour éviter les doubles appels. Elle est réactivée à la fermeture.
-  await chrome.runtime.sendMessage({ type: "popup:opened" }).catch(() => {});
+  // On ouvre un port vers le SW pour qu'il sache que la popup est active.
+  // Tant que le port est ouvert, le SW ignore les ticks d'alarme (pas de double appel).
+  // Quand la popup se ferme, le port se déconnecte automatiquement → le SW reprend.
+  // On ouvre un port vers le SW pour qu'il sache que la popup est active.
+  // Tant que le port est ouvert, le SW ignore les ticks d'alarme (pas de double appel).
+  // Quand la popup se ferme, le port se déconnecte automatiquement → le SW reprend.
+  chrome.runtime.connect({ name: "popup" });
 
   const REFRESH_STEPS_MS   = [5000, 10000, 15000, 30000, 60000];
   const DEFAULT_REFRESH_MS = 30000;
@@ -869,18 +873,11 @@ async function init() {
     ? REFRESH_STEPS_MS[refreshIdx]
     : DEFAULT_REFRESH_MS;
 
-  const popupRefreshTimer = setInterval(async () => {
+  setInterval(async () => {
     if (watchers.length === 0 || isPaused) return;
     await refreshAndRender();
   }, intervalMs);
 
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") {
-      clearInterval(popupRefreshTimer);
-      // Réactive l'alarme du SW quand la popup se ferme
-      chrome.runtime.sendMessage({ type: "popup:closed" }).catch(() => {});
-    }
-  });
 
   el.stopSearch.addEventListener("input", onStopInput);
   el.validateBtn.addEventListener("click", validateSelection);

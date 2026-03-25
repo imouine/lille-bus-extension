@@ -47,6 +47,7 @@ async function loadPausedState() {
  */
 function startPauseAnimation() {
   chrome.action.setBadgeBackgroundColor({ color: "#616161" });
+  chrome.action.setBadgeTextColor({ color: "#FFFFFF" });
   chrome.action.setBadgeText({ text: "II" });
 }
 
@@ -292,18 +293,18 @@ function minutesUntilFromRecord(record) {
   return null;
 }
 
-// ---------- Badge visuel (couleur + flash d'actualisation) ----------
+// ---------- Badge visuel (couleur + respiration live) ----------
 
 /**
  * Palette de couleurs selon les minutes restantes (données live uniquement).
- *   > 5 min  → bleu   (#1976d2) — normal
- *   2–5 min  → orange (#e65100) — vigilance
- *   0–1 min  → rouge  (#c62828) — imminent
+ *   > 5 min  -> bleu   (#1976d2) — normal
+ *   2-5 min  -> orange (#e65100) — vigilance
+ *   0-1 min  -> rouge  (#c62828) — imminent
  */
 function badgeColor(minutes) {
-  if (minutes <= 1) return { r: 198, g: 40,  b: 40  }; // rouge
-  if (minutes <= 5) return { r: 230, g: 81,  b: 0   }; // orange
-  return                   { r: 25,  g: 118, b: 210 }; // bleu
+  if (minutes <= 1) return { r: 198, g: 40,  b: 40  };
+  if (minutes <= 5) return { r: 230, g: 81,  b: 0   };
+  return                   { r: 25,  g: 118, b: 210 };
 }
 
 function colorToHex({ r, g, b }) {
@@ -320,21 +321,29 @@ function lerpColor(a, b, t) {
 
 const WHITE = { r: 255, g: 255, b: 255 };
 
-/** État de l'animation */
+/** Etat de l'animation */
 let _isLive          = false;
 let _lastLiveMinutes = null;
-let _flashTimer      = null;
+let _breatheTimer    = null;
+let _breathePhase    = 0;
+let _boostAmount     = 0; // amplitude bonus apres un refresh, s'estompe
 
 /**
- * Amplitude du flash selon l'urgence :
- *   > 5 min → subtil (20 % vers blanc)
- *   2–5 min → moyen (35 %)
- *   ≤ 1 min → fort (55 %)
+ * Respiration continue douce :
+ * - Cycle de 3s (sinusoidal) — rythme agreable, ni trop rapide ni trop lent
+ * - Tick toutes les 50ms — fluide sans etre gourmand
+ * - Amplitude de base selon urgence (subtile)
+ * - Boost temporaire au refresh (+0.25) qui s'estompe en ~2s
  */
-function flashAmplitude(minutes) {
-  if (minutes <= 1) return 0.55;
-  if (minutes <= 5) return 0.35;
-  return 0.20;
+const BREATHE_TICK_MS   = 50;
+const BREATHE_PERIOD_MS = 3000;
+const BREATHE_STEP      = (2 * Math.PI * BREATHE_TICK_MS) / BREATHE_PERIOD_MS;
+const BOOST_DECAY        = 0.012; // perte de boost par tick (~2s pour revenir a 0)
+
+function breatheAmplitude(minutes) {
+  if (minutes <= 1) return 0.30;
+  if (minutes <= 5) return 0.18;
+  return 0.10;
 }
 
 async function glowEnabled() {
@@ -342,69 +351,56 @@ async function glowEnabled() {
   return prefs?.glowEnabled !== false;
 }
 
-/**
- * Flash d'actualisation : un pulse unique qui s'éclaircit vers le blanc
- * puis revient doucement à la couleur de base.
- *
- * Durée totale : ~800ms
- * - Montée rapide (200ms) : couleur de base → pic blanc
- * - Descente douce (600ms) : pic blanc → couleur de base
- *
- * Donne un effet visuel de "ping" à chaque actualisation live,
- * similaire au dot pulsant (●) dans la popup.
- */
-const FLASH_TICK_MS    = 30;
-const FLASH_DURATION   = 800;
-const FLASH_RISE_RATIO = 0.25; // 25% montée, 75% descente
+function startBreatheLoop() {
+  if (_breatheTimer !== null) return;
+  _breathePhase = 0;
 
-async function triggerRefreshFlash() {
-  if (!_isLive || _lastLiveMinutes === null) return;
-  if (!(await glowEnabled())) return;
+  _breatheTimer = setInterval(async () => {
+    if (!_isLive || _lastLiveMinutes === null) return;
+    if (!(await glowEnabled())) return;
 
-  // Annule un flash précédent en cours
-  if (_flashTimer !== null) {
-    clearInterval(_flashTimer);
-    _flashTimer = null;
-  }
+    _breathePhase += BREATHE_STEP;
+    if (_breathePhase > 2 * Math.PI) _breathePhase -= 2 * Math.PI;
 
-  const base      = badgeColor(_lastLiveMinutes);
-  const amplitude = flashAmplitude(_lastLiveMinutes);
-  const riseEnd   = FLASH_DURATION * FLASH_RISE_RATIO;
-  let elapsed     = 0;
+    // Estompe le boost progressivement
+    if (_boostAmount > 0) _boostAmount = Math.max(0, _boostAmount - BOOST_DECAY);
 
-  _flashTimer = setInterval(() => {
-    elapsed += FLASH_TICK_MS;
+    // Intensite sinusoidale douce [0, 1]
+    const wave = (1 - Math.cos(_breathePhase)) / 2;
+    const amplitude = breatheAmplitude(_lastLiveMinutes) + _boostAmount;
 
-    let intensity;
-    if (elapsed <= riseEnd) {
-      const t = elapsed / riseEnd;
-      intensity = 1 - (1 - t) * (1 - t);
-    } else {
-      const t = (elapsed - riseEnd) / (FLASH_DURATION - riseEnd);
-      intensity = 1 - t * t;
-    }
+    const base  = badgeColor(_lastLiveMinutes);
+    const mixed = lerpColor(base, WHITE, wave * amplitude);
 
-    intensity = Math.max(0, Math.min(1, intensity));
-    const mixed = lerpColor(base, WHITE, intensity * amplitude);
+    // Texte : quand le fond s'éclaircit, le texte s'assombrit pour garder le contraste
+    // Au repos (wave=0) : blanc pur. Au pic (wave=1) : gris foncé proportionnel à l'amplitude
+    const DARK_TEXT = { r: 30, g: 30, b: 50 };
+    const textColor = lerpColor(WHITE, DARK_TEXT, wave * amplitude);
 
     try {
       chrome.action.setBadgeBackgroundColor({ color: colorToHex(mixed) });
+      chrome.action.setBadgeTextColor({ color: colorToHex(textColor) });
     } catch (_) {
-      // SW déchargé pendant l'animation — on arrête proprement
-      clearInterval(_flashTimer);
-      _flashTimer = null;
-      return;
+      clearInterval(_breatheTimer);
+      _breatheTimer = null;
     }
-
-    if (elapsed >= FLASH_DURATION) {
-      clearInterval(_flashTimer);
-      _flashTimer = null;
-      try {
-        chrome.action.setBadgeBackgroundColor({ color: colorToHex(base) });
-      } catch (_) { /* SW déchargé */ }
-    }
-  }, FLASH_TICK_MS);
+  }, BREATHE_TICK_MS);
 }
+
+function stopBreatheLoop() {
+  if (_breatheTimer !== null) {
+    clearInterval(_breatheTimer);
+    _breatheTimer = null;
+  }
+}
+
+/** Appele apres chaque refresh live reussi — donne un boost temporaire */
+function triggerRefreshFlash() {
+  _boostAmount = 0.25;
+}
+
+// Demarre l'animation des le chargement du service worker
+startBreatheLoop();
 
 async function setBadge(text) {
   await chrome.action.setBadgeText({ text });
@@ -541,6 +537,7 @@ async function refreshBadge() {
     _isLive = false;
     _lastLiveMinutes = null;
     await chrome.storage.local.set({ [STORAGE_KEYS.watcherResults]: [] });
+    await chrome.action.setBadgeTextColor({ color: "#FFFFFF" });
     await setBadge("…");
     return;
   }
@@ -555,6 +552,7 @@ async function refreshBadge() {
       _isLive = false;
       _lastLiveMinutes = null;
       await chrome.action.setBadgeBackgroundColor({ color: "#757575" });
+      await chrome.action.setBadgeTextColor({ color: "#FFFFFF" });
       await setBadge(best !== null ? (best > 99 ? "99+" : String(best)) : "--");
       return;
     }
@@ -562,6 +560,7 @@ async function refreshBadge() {
     _lastLiveMinutes = best;
     _isLive = true;
     await chrome.action.setBadgeBackgroundColor({ color: colorToHex(badgeColor(best)) });
+    await chrome.action.setBadgeTextColor({ color: "#FFFFFF" });
     await setBadge(best > 99 ? "99+" : String(best));
     // Flash visuel pour indiquer que la donnée vient d'être actualisée
     triggerRefreshFlash();
@@ -573,20 +572,34 @@ async function refreshBadge() {
   }
 }
 
+// ---------- Détection popup ouverte via port ----------
+// La popup ouvre un port "popup" à l'init. Tant qu'il est connecté,
+// l'alarme ignore ses ticks (la popup pilote les refresh via badge:refresh).
+// Quand la popup se ferme, le port se déconnecte automatiquement → l'alarme reprend.
+let _popupConnected = false;
+
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name !== "popup") return;
+  _popupConnected = true;
+  port.onDisconnect.addListener(() => {
+    _popupConnected = false;
+  });
+});
+
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm?.name === "refresh-badge") refreshBadge();
+  if (alarm?.name === "refresh-badge" && !_popupConnected) refreshBadge();
 });
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (!message || typeof message !== "object") return;
 
   if (message.type === "watchers:clear") {
-    // Plus aucun watcher : on nettoie tout (pas de refetch)
     _isLive = false;
     _lastLiveMinutes = null;
     chrome.storage.local
       .set({ [STORAGE_KEYS.watchers]: [], [STORAGE_KEYS.watcherResults]: [] })
       .then(() => chrome.action.setBadgeBackgroundColor({ color: "#757575" }))
+      .then(() => chrome.action.setBadgeTextColor({ color: "#FFFFFF" }))
       .then(() => chrome.action.setBadgeText({ text: "…" }))
       .then(() => sendResponse({ ok: true }))
       .catch((e) => sendResponse({ ok: false, error: String(e) }));
@@ -626,23 +639,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === "prefs:refreshInterval" && typeof message.periodInMinutes === "number") {
     resetAlarm(message.periodInMinutes)
       .then(() => refreshBadge())
-      .then(() => sendResponse({ ok: true }))
-      .catch((e) => sendResponse({ ok: false, error: String(e) }));
-    return true;
-  }
-
-  // La popup prend le contrôle du refresh quand elle est ouverte.
-  // On suspend l'alarme pour éviter les doubles appels API.
-  if (message.type === "popup:opened") {
-    chrome.alarms.clear("refresh-badge")
-      .then(() => sendResponse({ ok: true }))
-      .catch((e) => sendResponse({ ok: false, error: String(e) }));
-    return true;
-  }
-
-  if (message.type === "popup:closed") {
-    getRefreshPeriod()
-      .then((period) => chrome.alarms.create("refresh-badge", { periodInMinutes: period }))
       .then(() => sendResponse({ ok: true }))
       .catch((e) => sendResponse({ ok: false, error: String(e) }));
     return true;
