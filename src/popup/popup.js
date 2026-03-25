@@ -392,10 +392,20 @@ function setStatus(text) { el.status.textContent = text || ""; }
 async function saveWatchers() {
   await chrome.storage.local.set({ [STORAGE_KEYS.watchers]: watchers });
   if (watchers.length === 0) {
-    // Nettoie aussi la selection legacy pour éviter la résurrection au prochain chargement
     await chrome.storage.local.remove([STORAGE_KEYS.selection]);
   }
   await chrome.runtime.sendMessage({ type: "watchers:set", watchers }).catch(() => {});
+}
+
+/**
+ * Demande un refresh au service worker, attend qu'il ait fini d'écrire
+ * watcherResults dans le storage, puis met à jour l'affichage.
+ * Garantit que les badges temps ne passent jamais par "…" inutilement.
+ */
+async function refreshAndRender() {
+  await chrome.runtime.sendMessage({ type: "badge:refresh" }).catch(() => {});
+  await renderWatchers();
+  await showNextMinutes();
 }
 
 /** Retourne l'urgence CSS d'un nombre de minutes live ou théorique */
@@ -738,8 +748,8 @@ async function addWatcher() {
   );
   if (!exists) {
     watchers.push(w);
-    await renderWatchers();
     await saveWatchers();
+    await refreshAndRender();
   }
   // Réinitialise le draft pour permettre d'en ajouter un autre
   draft = { stopNorm: null, lineCode: null, direction: null };
@@ -752,7 +762,6 @@ async function addWatcher() {
   el.lineResults.innerHTML = "";
   el.directionResults.innerHTML = "";
   setStatus("");
-  await showNextMinutes();
 }
 
 async function validateSelection() {
@@ -817,8 +826,12 @@ async function init() {
   // Initialise isPaused avant le premier rendu
   isPaused = stored[STORAGE_KEYS.paused] === true;
 
-  await renderWatchers();
-  if (watchers.length > 0) showNextMinutes();
+  // Refresh immédiat : demande au service worker de fetcher puis lit les résultats
+  if (watchers.length > 0) {
+    await refreshAndRender();
+  } else {
+    await renderWatchers(); // affiche juste la section vide
+  }
 
   // --- Auto-refresh de la popup ---
   // Délègue entièrement au service worker : envoie badge:refresh,
@@ -834,9 +847,7 @@ async function init() {
 
   const popupRefreshTimer = setInterval(async () => {
     if (watchers.length === 0 || isPaused) return;
-    await chrome.runtime.sendMessage({ type: "badge:refresh" }).catch(() => {});
-    await renderWatchers();
-    await showNextMinutes();
+    await refreshAndRender();
   }, intervalMs);
 
   window.addEventListener("unload", () => clearInterval(popupRefreshTimer));
