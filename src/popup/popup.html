@@ -48,6 +48,19 @@
       <div id="status" class="status" role="status" aria-live="polite"></div>
 
       <div class="settingsRow">
+        <button id="pauseBtn" class="settingsBtn pauseBtn" type="button" aria-label="Pause refresh" aria-pressed="false">
+          <!-- icône pause (affichée quand actif) -->
+          <svg class="icon-pause" width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <rect x="4"  y="3" width="4" height="14" rx="1.5" fill="currentColor"/>
+            <rect x="12" y="3" width="4" height="14" rx="1.5" fill="currentColor"/>
+          </svg>
+          <!-- icône play (affichée quand en pause) -->
+          <svg class="icon-play" width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path d="M5 3.5 L16 10 L5 16.5 Z" fill="currentColor"/>
+          </svg>
+          <span id="pauseBtnLabel" data-i18n="btn_pause">Pause</span>
+        </button>
+
         <button id="openOptionsBtn" class="settingsBtn" type="button">
           <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true">
             <path d="M10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>

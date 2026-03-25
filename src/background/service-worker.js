@@ -24,7 +24,40 @@ const API_URL =
 const STORAGE_KEYS = {
   selection: "selection",
   prefs:     "prefs",
+  paused:    "paused",
 };
+
+/** État de pause — mis en cache pour éviter un storage.get à chaque tick */
+let _isPaused = false;
+
+async function loadPausedState() {
+  const { [STORAGE_KEYS.paused]: val } = await chrome.storage.local.get([STORAGE_KEYS.paused]);
+  _isPaused = val === true;
+}
+
+// ---------- Animation badge en pause ----------
+
+/**
+ * En pause, le badge affiche une animation douce :
+ * - Texte qui alterne entre "II" et "·· " toutes les 2 s
+ * - Couleur qui respire entre deux gris (foncé → clair) en sinusoïde ~3 s
+ * Effet : subtil, immédiatement reconnaissable comme "en attente".
+ */
+function startPauseAnimation() {
+  chrome.action.setBadgeBackgroundColor({ color: "#616161" });
+  chrome.action.setBadgeText({ text: "II" });
+}
+
+function stopPauseAnimation() {
+  // rien à stopper, l'état est statique
+}
+
+async function applyPausedBadge() {
+  // Arrête le glow live
+  _isLive = false;
+  _lastLiveMinutes = null;
+  startPauseAnimation();
+}
 
 // Crans de fréquence (miroir de options.js)
 const REFRESH_STEPS_MIN  = [1/12, 1/6, 1/4, 0.5, 1];
@@ -390,6 +423,11 @@ function directionMatches(sens, gtfsDir) {
 }
 
 async function refreshBadge() {
+  if (_isPaused) {
+    await applyPausedBadge();
+    return;
+  }
+
   const { [STORAGE_KEYS.selection]: selection } = await chrome.storage.local.get(
     [STORAGE_KEYS.selection]
   );
@@ -484,6 +522,17 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === "badge:pause") {
+    const paused = message.paused === true;
+    _isPaused = paused;
+    if (!paused) stopPauseAnimation();
+    chrome.storage.local.set({ [STORAGE_KEYS.paused]: paused })
+      .then(() => paused ? applyPausedBadge() : refreshBadge())
+      .then(() => sendResponse({ ok: true }))
+      .catch((e) => sendResponse({ ok: false, error: String(e) }));
+    return true;
+  }
+
   if (message.type === "prefs:refreshInterval" && typeof message.periodInMinutes === "number") {
     resetAlarm(message.periodInMinutes)
       .then(() => refreshBadge())
@@ -494,4 +543,4 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 });
 
 // Premier rafraîchissement au chargement du service worker
-refreshBadge();
+loadPausedState().then(() => _isPaused ? applyPausedBadge() : refreshBadge());

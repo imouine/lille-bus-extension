@@ -22,6 +22,7 @@ const STORAGE_KEYS = {
   selection:      "selection",
   lineColorsCache:"lineColorsCache",
   prefs:          "prefs",
+  paused:         "paused",
 };
 
 // --- DOM ----------------------------------------------------------------------
@@ -39,6 +40,8 @@ const el = {
   validateBtn:      document.getElementById("validateBtn"),
   status:           document.getElementById("status"),
   openOptionsBtn:   document.getElementById("openOptionsBtn"),
+  pauseBtn:         document.getElementById("pauseBtn"),
+  pauseBtnLabel:    document.getElementById("pauseBtnLabel"),
 };
 
 // --- i18n ---------------------------------------------------------------------
@@ -53,6 +56,8 @@ const I18N = {
     title_direction:       "Sens",
     btn_validate:          "Valider",
     btn_settings:          "Préférences",
+    btn_pause:             "Pause",
+    btn_resume:            "Reprendre",
     hint_min_letters:      "Tape au moins 2 lettres.",
     hint_no_suggestion:    "Aucune suggestion.",
     hint_selection_loaded: "Sélection actuelle chargée.",
@@ -70,6 +75,8 @@ const I18N = {
     title_direction:       "Direction",
     btn_validate:          "Save",
     btn_settings:          "Preferences",
+    btn_pause:             "Pause",
+    btn_resume:            "Resume",
     hint_min_letters:      "Type at least 2 letters.",
     hint_no_suggestion:    "No suggestions.",
     hint_selection_loaded: "Current selection loaded.",
@@ -583,6 +590,25 @@ async function init() {
   if (el.openOptionsBtn) {
     el.openOptionsBtn.addEventListener("click", () => chrome.runtime.openOptionsPage());
   }
+
+  // --- Bouton pause/play ---
+  const { [STORAGE_KEYS.paused]: pausedVal } =
+    await chrome.storage.local.get([STORAGE_KEYS.paused]);
+  let paused = pausedVal === true;
+
+  function applyPauseUI() {
+    el.pauseBtn.setAttribute("aria-pressed", String(paused));
+    el.pauseBtn.setAttribute("aria-label", t(paused ? "btn_resume" : "btn_pause"));
+    el.pauseBtnLabel.textContent = t(paused ? "btn_resume" : "btn_pause");
+  }
+
+  applyPauseUI();
+
+  el.pauseBtn.addEventListener("click", async () => {
+    paused = !paused;
+    applyPauseUI();
+    await chrome.runtime.sendMessage({ type: "badge:pause", paused });
+  });
 }
 
 init();

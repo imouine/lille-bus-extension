@@ -291,7 +291,8 @@ input:focus {
 /* Lien vers la page Options */
 .settingsRow {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   margin-top: 4px;
 }
 
@@ -317,6 +318,21 @@ input:focus {
 .settingsBtn:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px var(--focus);
+}
+
+/* Bouton pause — états des icônes */
+.pauseBtn .icon-play  { display: none; }
+.pauseBtn .icon-pause { display: block; }
+
+.pauseBtn[aria-pressed="true"] .icon-pause { display: none; }
+.pauseBtn[aria-pressed="true"] .icon-play  { display: block; }
+
+/* En pause : couleur orange pour signaler l'état */
+.pauseBtn[aria-pressed="true"] {
+  color: #e65100;
+}
+.pauseBtn[aria-pressed="true"]:hover {
+  background: rgba(230, 81, 0, 0.10);
 }
 
 .hidden {
