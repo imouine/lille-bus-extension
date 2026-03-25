@@ -1,90 +1,89 @@
-# Contributing
+# Contributing to Lille Bus Extension
 
-Thank you for your interest in contributing to **Lille Bus Extension**!
+First off — thank you for taking the time to contribute! 🎉
 
-This project aims to provide a simple and fast way to check bus arrival times in Lille directly from the browser toolbar.
-
-Contributions of all kinds are welcome: bug reports, feature requests, documentation improvements, and code contributions.
+This is a small open-source project and every contribution matters, whether it's a bug report, a suggestion, a documentation fix, or a pull request.
 
 ---
 
-## Reporting Issues
+## Table of contents
 
-If you find a bug or something that doesn't work as expected, please open an issue.
-
-When reporting a bug, please include:
-
-- a clear description of the problem
-- steps to reproduce the issue
-- what you expected to happen
-- your browser and operating system
-
-This helps make debugging much easier.
+- [Reporting a bug](#reporting-a-bug)
+- [Suggesting a feature](#suggesting-a-feature)
+- [Development setup](#development-setup)
+- [Making a pull request](#making-a-pull-request)
+- [Code style](#code-style)
 
 ---
 
-## Suggesting Features
+## Reporting a bug
 
-Feature ideas are welcome.
+Found something broken? Please [open an issue](https://github.com/imouine/lille-bus-extension/issues) and include:
 
-Before implementing a large change, please open an issue to discuss it first.  
-This helps make sure the idea fits the project's direction.
+- A clear description of the problem
+- Steps to reproduce it
+- What you expected to happen vs. what actually happened
+- Your Chrome version and OS
 
----
-
-## Development Setup
-
-1. Clone the repository:
-
-
-git clone https://github.com/imouine/lille-bus-extension.git
-
-
-2. Open Chrome and go to:
-
-
-chrome://extensions
-
-
-3. Enable **Developer Mode**
-
-4. Click **Load unpacked**
-
-5. Select the project folder
-
-You can now test the extension locally.
+The more context you provide, the faster it gets fixed.
 
 ---
 
-## Submitting Changes
+## Suggesting a feature
 
-1. Fork the repository
-2. Create a new branch
-
-Example:
-
-
-feature/add-badge-refresh
-
-
-3. Commit your changes with clear commit messages
-4. Open a Pull Request
+Feature ideas are welcome. Before opening a large pull request, please **open an issue first** to discuss the idea. This avoids wasted effort if the direction doesn't fit the project.
 
 ---
 
-## Code Guidelines
+## Development setup
 
-Please try to keep the project:
+1. **Clone** the repository
 
-- simple
-- readable
-- lightweight
-- dependency-free when possible
+   ```bash
+   git clone https://github.com/imouine/lille-bus-extension.git
+   cd lille-bus-extension
+   ```
 
-Avoid introducing heavy frameworks unless clearly necessary.
+2. **Load the extension** in Chrome
+
+   - Go to `chrome://extensions`
+   - Enable **Developer mode**
+   - Click **Load unpacked** and select the `src/` folder
+
+3. **Regenerate static timetables** (optional, requires Python 3)
+
+   ```bash
+   python scripts/build_schedules.py
+   ```
+
+   This downloads the latest Ilévia GTFS feed and rebuilds `src/data/schedules.json`.
 
 ---
 
-## Questions
+## Making a pull request
 
-If you have questions about the project, feel free to open a discussion or an issue.
+1. Fork the repository and create a branch from `main`
+
+   ```bash
+   git checkout -b fix/my-bug-fix
+   ```
+
+2. Make your changes and test them locally in Chrome
+
+3. Keep commits focused — one logical change per commit
+
+4. Open a pull request against `main` with a clear description of what changed and why
+
+---
+
+## Code style
+
+- Plain **Vanilla JS** — no build step, no bundler, no framework
+- The extension uses **Chrome Manifest V3** APIs (`chrome.alarms`, `chrome.storage`, `chrome.action`)
+- Keep functions small and well-commented
+- The `src/` folder is what gets loaded directly as an unpacked extension — keep it clean
+
+---
+
+Thanks again for contributing. Every improvement, big or small, is appreciated. 🚌
+

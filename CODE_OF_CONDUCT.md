@@ -1,37 +1,46 @@
 # Code of Conduct
 
-## Our Pledge
+## Our commitment
 
-We want this project to be a welcoming and respectful place for everyone.
+This project is open to everyone. We want participation in this community to be a positive experience for all, regardless of background, experience level, or identity.
 
-Contributors, maintainers, and participants are expected to interact in a way that makes the community open, inclusive, and constructive.
+---
 
-## Expected Behavior
+## Expected behavior
 
-Please:
+- **Be respectful** — treat others the way you'd want to be treated
+- **Be constructive** — focus on the problem, not the person
+- **Be patient** — not everyone has the same level of experience
+- **Be collaborative** — good ideas can come from anyone
 
-- Be respectful and considerate toward others
-- Provide constructive feedback
-- Focus on improving the project
-- Be patient and welcoming with newcomers
+---
 
-## Unacceptable Behavior
+## Unacceptable behavior
 
-The following behaviors are not acceptable:
+The following will not be tolerated:
 
-- Harassment or personal attacks
-- Discriminatory language or behavior
-- Insults, trolling, or hostile comments
-- Publishing private information without permission
+- Harassment, insults, or personal attacks
+- Discriminatory language or behavior of any kind
+- Trolling or deliberately hostile comments
+- Publishing someone's private information without consent
+
+---
 
 ## Enforcement
 
-The maintainer of this project is responsible for enforcing this code of conduct.
+The maintainer reserves the right to remove, edit, or reject any comment, commit, issue, or contribution that violates this code of conduct.
 
-If unacceptable behavior occurs, the maintainer may remove comments, issues, or contributions that violate these rules.
+Repeated or severe violations may result in a temporary or permanent ban from the project.
 
-## Reporting Issues
+---
 
-If you experience or witness unacceptable behavior, please report it by contacting the maintainer through GitHub.
+## Reporting
 
-All reports will be handled respectfully and confidentially whenever possible.
+If you witness or experience unacceptable behavior, please report it by contacting the maintainer directly through GitHub.
+
+All reports will be handled with discretion and taken seriously.
+
+---
+
+_This code of conduct applies to all project spaces — issues, pull requests, discussions, and any other community interactions._
+
