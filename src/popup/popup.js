@@ -874,10 +874,12 @@ async function init() {
     await refreshAndRender();
   }, intervalMs);
 
-  window.addEventListener("unload", () => {
-    clearInterval(popupRefreshTimer);
-    // Réactive l'alarme du SW quand la popup se ferme
-    chrome.runtime.sendMessage({ type: "popup:closed" }).catch(() => {});
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      clearInterval(popupRefreshTimer);
+      // Réactive l'alarme du SW quand la popup se ferme
+      chrome.runtime.sendMessage({ type: "popup:closed" }).catch(() => {});
+    }
   });
 
   el.stopSearch.addEventListener("input", onStopInput);
