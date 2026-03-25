@@ -22,19 +22,46 @@
       </header>
 
       <section>
-        <div class="sectionTitle" id="label_appearance">Apparence</div>
+        <div class="sectionTitle" id="label_appearance">Appearance</div>
 
         <label class="toggleRow">
-          <span class="toggleText" id="label_theme">Mode nuit</span>
+          <span class="toggleText" id="label_theme">Night mode</span>
           <input id="themeToggle" class="toggleInput" type="checkbox" />
           <span class="toggleSwitch" aria-hidden="true"></span>
         </label>
 
         <label class="toggleRow">
-          <span class="toggleText" id="label_lang">English</span>
+          <span class="toggleText" id="label_lang">Français</span>
           <input id="langToggle" class="toggleInput" type="checkbox" />
           <span class="toggleSwitch" aria-hidden="true"></span>
         </label>
+      </section>
+
+      <section>
+        <div class="sectionTitle" id="label_refresh_section">Refresh</div>
+
+        <div class="sliderRow">
+          <div class="sliderHeader">
+            <span class="toggleText" id="label_refresh">Refresh interval</span>
+            <span class="sliderValue" id="refreshValue">60s</span>
+          </div>
+          <input
+            id="refreshSlider"
+            class="slider"
+            type="range"
+            min="0"
+            max="4"
+            step="1"
+            value="4"
+          />
+          <div class="sliderTicks" aria-hidden="true">
+            <span>5s</span>
+            <span>10s</span>
+            <span>15s</span>
+            <span>30s</span>
+            <span>60s</span>
+          </div>
+        </div>
       </section>
 
       <p class="saved" id="savedMsg"></p>

@@ -6,15 +6,16 @@
  * https://github.com/imouine/lille-bus-extension
  */
 
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener(async () => {
   chrome.action.setBadgeText({ text: "…" });
   chrome.action.setBadgeBackgroundColor({ color: "#1976d2" });
-
-  chrome.alarms.create("refresh-badge", { periodInMinutes: 1 });
+  const period = await getRefreshPeriod();
+  chrome.alarms.create("refresh-badge", { periodInMinutes: period });
 });
 
-chrome.runtime.onStartup.addListener(() => {
-  chrome.alarms.create("refresh-badge", { periodInMinutes: 1 });
+chrome.runtime.onStartup.addListener(async () => {
+  const period = await getRefreshPeriod();
+  chrome.alarms.create("refresh-badge", { periodInMinutes: period });
 });
 
 const API_URL =
@@ -22,7 +23,26 @@ const API_URL =
 
 const STORAGE_KEYS = {
   selection: "selection",
+  prefs:     "prefs",
 };
+
+// Crans de fréquence (miroir de options.js)
+const REFRESH_STEPS_MIN  = [1/12, 1/6, 1/4, 0.5, 1];
+const DEFAULT_REFRESH_IDX = 4; // 60s
+
+async function getRefreshPeriod() {
+  const { [STORAGE_KEYS.prefs]: prefs } = await chrome.storage.local.get([STORAGE_KEYS.prefs]);
+  const idx = prefs?.refreshIdx;
+  if (Number.isInteger(idx) && idx >= 0 && idx < REFRESH_STEPS_MIN.length) {
+    return REFRESH_STEPS_MIN[idx];
+  }
+  return REFRESH_STEPS_MIN[DEFAULT_REFRESH_IDX];
+}
+
+async function resetAlarm(periodInMinutes) {
+  await chrome.alarms.clear("refresh-badge");
+  chrome.alarms.create("refresh-badge", { periodInMinutes });
+}
 
 // ---------- Horaires théoriques (schedules.json) ----------
 
@@ -360,6 +380,14 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   if (message.type === "badge:refresh") {
     refreshBadge()
+      .then(() => sendResponse({ ok: true }))
+      .catch((e) => sendResponse({ ok: false, error: String(e) }));
+    return true;
+  }
+
+  if (message.type === "prefs:refreshInterval" && typeof message.periodInMinutes === "number") {
+    resetAlarm(message.periodInMinutes)
+      .then(() => refreshBadge())
       .then(() => sendResponse({ ok: true }))
       .catch((e) => sendResponse({ ok: false, error: String(e) }));
     return true;
