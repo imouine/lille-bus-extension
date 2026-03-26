@@ -37,6 +37,12 @@ const I18N = {
     meta_data:             "Données",
     meta_gtfs:             "GTFS",
     saved:                 "Préférences enregistrées",
+    nav_support:           "Soutenir",
+    label_support:         "Soutenir",
+    desc_support:          "Ce projet est gratuit et développé sur mon temps personnel. Votre soutien m'aide à l'améliorer et à ajouter de nouvelles fonctionnalités.",
+    kofi_title:            "Soutenir le projet",
+    kofi_desc:             "Aidez-moi à continuer d'améliorer et de maintenir cet outil.",
+    kofi_btn_text:         "Soutenir le projet",
   },
   en: {
     nav_appearance:        "Appearance",
@@ -62,6 +68,12 @@ const I18N = {
     meta_data:             "Data",
     meta_gtfs:             "GTFS",
     saved:                 "Preferences saved",
+    nav_support:           "Support",
+    label_support:         "Support",
+    desc_support:          "This project is free and built in my spare time. Your support helps me improve it and add new features.",
+    kofi_title:            "Support the project",
+    kofi_desc:             "Help me keep improving and maintaining this tool.",
+    kofi_btn_text:         "Support the project",
   },
 };
 

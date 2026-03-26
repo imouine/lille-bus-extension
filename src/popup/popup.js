@@ -77,6 +77,7 @@ const I18N = {
     hint_min_letters:      "Tape au moins 2 lettres.",
     hint_no_suggestion:    "Aucune suggestion.",
     summary_template:      "Arrêt : {stop} — Ligne : {line} — Sens : {direction}",
+    link_support:          "❤️ Soutenir",
   },
   en: {
     label_stop:            "Stop",
@@ -93,6 +94,7 @@ const I18N = {
     hint_min_letters:      "Type at least 2 letters.",
     hint_no_suggestion:    "No suggestions.",
     summary_template:      "Stop: {stop} — Line: {line} — Dir: {direction}",
+    link_support:          "❤️ Support",
   },
 };
 

@@ -486,6 +486,92 @@ main {
 
 .meta-link:hover { color: var(--accent-hover); }
 
+/* ─── Support / Ko-fi ───────────────────────────────────────────────────────── */
+.support-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.kofi-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 20px;
+  background: var(--bg);
+  transition: border-color 200ms, box-shadow 200ms;
+}
+
+.kofi-card:hover {
+  border-color: #ff5e5b;
+  box-shadow: 0 0 20px rgba(255, 94, 91, 0.12);
+}
+
+.kofi-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: rgba(255, 94, 91, 0.10);
+  color: #ff5e5b;
+  flex-shrink: 0;
+}
+
+.kofi-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.kofi-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.kofi-desc {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.kofi-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 999px;
+  background: #ff5e5b;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 150ms, transform 100ms, box-shadow 150ms;
+  box-shadow: 0 2px 8px rgba(255, 94, 91, 0.25);
+}
+
+.kofi-btn:hover {
+  background: #e84e4b;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(255, 94, 91, 0.35);
+}
+
+.kofi-btn:active {
+  transform: translateY(0);
+}
+
+.kofi-btn svg {
+  flex-shrink: 0;
+}
+
 /* ─── Toast ─────────────────────────────────────────────────────────────────── */
 .toast {
   position: fixed;
