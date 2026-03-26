@@ -402,24 +402,44 @@ async function setBadge(text) {
  *   "MARCQ FERME AUX OIES"     vs "MARCQ EN BAROEUL FERME AUX OIES"
  *   "FACHES CENTRE COMMERCIAL"  vs "FACHES THUMESNIL CTRE COMMERCIAL"
  *   "VILLENEUVE D'ASCQ ..."    vs "VILLENEUVE D ASCQ ..."
+ *   "WASQUEHAL JEAN PAUL SARTRE" vs "WASQUEHAL JP SARTRE"
  *
- * Strategy: normalize both strings (strip accents, apostrophes, abbreviations)
- * then check that every significant word (≥ 4 chars) from the API value exists
- * in the GTFS headsign (with prefix tolerance for abbreviations like CTRE/CENTRE).
+ * Strategy:
+ *   1. Expand known abbreviations (JP→JEAN PAUL, CTRE→CENTRE, ST→SAINT, etc.)
+ *   2. Normalize both strings (strip accents, apostrophes)
+ *   3. Check that every significant word (≥ 4 chars) from the API value exists
+ *      in the GTFS headsign (with prefix tolerance for remaining abbreviations)
  */
+
+/** Multi-word abbreviation expansions (applied before word splitting). */
+const ABBREVIATION_MAP = [
+  [/\bJP\b/g,     "JEAN PAUL"],
+  [/\bJB\b/g,     "JEAN BAPTISTE"],
+  [/\bCTRE\b/g,   "CENTRE"],
+  [/\bCH\b/g,     "CENTRE HOSPITALIER"],
+  [/\bST\b/g,     "SAINT"],
+  [/\bSTE\b/g,    "SAINTE"],
+  [/\bGEN\b/g,    "GENERAL"],
+  [/\bAV\b/g,     "AVENUE"],
+  [/\bBD\b/g,     "BOULEVARD"],
+  [/\bPL\b/g,     "PLACE"],
+];
+
 function directionMatches(sens, gtfsDir) {
   if (!sens || !gtfsDir) return false;
   if (sens === gtfsDir) return true;
 
-  const norm = (s) => noAccents(s)
-    .replace(/['''-]/g, " ")
-    .replace(/\./g, "")
-    .toUpperCase()
-    .replace(/\bCENTRE\b/g, "CTRE")
-    .replace(/\bSAINT\b/g, "ST")
-    .replace(/\bSAINTE\b/g, "STE")
-    .split(/\s+/)
-    .filter(Boolean);
+  const norm = (s) => {
+    let r = noAccents(s)
+      .replace(/['''-]/g, " ")
+      .replace(/\./g, "")
+      .toUpperCase();
+    // Expand all abbreviations so both sides use the same long forms
+    for (const [pattern, expansion] of ABBREVIATION_MAP) {
+      r = r.replace(pattern, expansion);
+    }
+    return r.split(/\s+/).filter(Boolean);
+  };
 
   const sensWords = norm(sens);
   const gtfsWords = new Set(norm(gtfsDir));
@@ -468,8 +488,9 @@ async function fetchBestMinutes(watcherList) {
       const matches = records.filter((r) => {
         if (!r || r.code_ligne !== w.lineCode) return false;
         if (typeof r.heure_estimee_depart !== "string" && typeof r.cle_tri !== "string") return false;
-        // With stopIds the filter is already precise; without them we need fuzzy direction check
-        return stopIds ? true : directionMatches(r.sens_ligne, w.direction);
+        // Always filter by direction — a single stopId can serve multiple directions
+        // for the same line (e.g. LMQ002 serves L1→CHATEAU and L1→WAMBRECHIES AGRIPPIN)
+        return directionMatches(r.sens_ligne, w.direction);
       });
 
       let best = null;
