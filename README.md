@@ -1,14 +1,16 @@
 <div align="center">
   <img src="src/assets/icons/lille-bus-extension-logo.png" alt="Lille Bus Extension" width="128" />
 
-  <h1>Lille Bus Extension</h1>
+  <h1>Lille Bus — Live Countdown</h1>
 
   <p>A Chrome extension that shows the minutes until your next bus — right on the toolbar badge, in real time.</p>
 
-  ![Manifest V3](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?logo=googlechrome&logoColor=white)
+  ![Chrome Web Store](https://img.shields.io/badge/Chrome-Web%20Store-4285F4?logo=googlechrome&logoColor=white)
+  ![Manifest V3](https://img.shields.io/badge/Manifest-V3-4285F4?logo=googlechrome&logoColor=white)
   ![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue)
   ![MEL Open Data](https://img.shields.io/badge/Data-MEL%20Open%20Data-00a651)
   ![GTFS Ilévia](https://img.shields.io/badge/GTFS-Ilévia-ff6600)
+  [![Ko-fi](https://img.shields.io/badge/Ko--fi-Support-ff5e5b?logo=ko-fi&logoColor=white)](https://ko-fi.com/imouine)
 
 </div>
 
@@ -42,6 +44,7 @@
 | Language | Français / English |
 | Refresh interval | 5s · 10s · 15s · 30s · 60s (slider) |
 | Glow effect | Enable / Disable the badge pulse animation |
+| Support | Ko-fi integration — support the project directly from the options page |
 
 ### 🎨 Interface
 - **Collapsible selection** — selecting a stop, line or direction hides the other choices; click again to deselect and change
@@ -158,6 +161,16 @@ python scripts/explore_stop_ids.py
 
 ---
 
+## ❤️ Support
+
+This project is free and built in my spare time. If you find it useful, consider supporting the development:
+
+<a href="https://ko-fi.com/imouine" target="_blank">
+  <img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support on Ko-fi" height="36" />
+</a>
+
+---
+
 ## 🤝 Contributing
 
 Contributions are welcome — bug reports, feature ideas, or pull requests.
@@ -176,3 +189,10 @@ This project is not affiliated with, endorsed by, or sponsored by Ilévia, the M
 ## 📄 License
 
 [GPL-3.0](LICENSE) — © imouine
+
+---
+
+## 🔐 Privacy
+
+[Privacy Policy](PRIVACY_POLICY.md) — No data collection, no tracking, no cookies. Everything stays on your machine.
+
