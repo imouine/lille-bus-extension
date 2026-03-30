@@ -5,7 +5,8 @@
 
   <p>A Chrome extension that shows the minutes until your next bus — right on the toolbar badge, in real time.</p>
 
-  ![Chrome Web Store](https://img.shields.io/badge/Chrome-Web%20Store-4285F4?logo=googlechrome&logoColor=white)
+  [![Chrome Web Store](https://img.shields.io/badge/Chrome-Web%20Store-4285F4?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/jllciocpnnbaakdcommdoammhifoncme)
+  ![Version](https://img.shields.io/badge/version-1.0.0-brightgreen)
   ![Manifest V3](https://img.shields.io/badge/Manifest-V3-4285F4?logo=googlechrome&logoColor=white)
   ![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue)
   ![MEL Open Data](https://img.shields.io/badge/Data-MEL%20Open%20Data-00a651)
@@ -53,7 +54,17 @@
 
 ---
 
-## 🚀 Installation (developer mode)
+## 🚀 Installation
+
+### From the Chrome Web Store *(recommended)*
+
+[![Install from Chrome Web Store](https://img.shields.io/badge/Install%20on-Chrome-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/jllciocpnnbaakdcommdoammhifoncme)
+
+1. Visit the [Chrome Web Store page](https://chromewebstore.google.com/detail/jllciocpnnbaakdcommdoammhifoncme)
+2. Click **Add to Chrome**
+3. Click the extension icon in the toolbar to get started
+
+### Developer mode (from source)
 
 1. Clone the repository
    ```bash
@@ -161,6 +172,12 @@ python scripts/explore_stop_ids.py
 
 ---
 
+## 📋 Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for the full release history.
+
+---
+
 ## ❤️ Support
 
 This project is free and built in my spare time. If you find it useful, consider supporting the development:
@@ -195,4 +212,3 @@ This project is not affiliated with, endorsed by, or sponsored by Ilévia, the M
 ## 🔐 Privacy
 
 [Privacy Policy](PRIVACY_POLICY.md) — No data collection, no tracking, no cookies. Everything stays on your machine.
-
