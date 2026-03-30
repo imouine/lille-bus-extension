@@ -20,6 +20,16 @@ and this project follows Semantic Versioning.
 
 ---
 
+## [1.0.1] - 2026-03-31
+
+### Fixed
+- **Badge not updated after Save** — clicking "Save" now triggers an immediate badge refresh before closing the popup, so the badge no longer stays stuck on `…`
+- **Wrong bus shown in badge with mixed live/theoretical watchers** — the badge now always displays the true minimum arrival time across all watchers; previously a live arrival in 6 min would incorrectly override a theoretical arrival in 3 min
+- **Popup rounded corners** — removed the `border-radius` on the popup shell; Chrome already clips the popup to a rectangle, so the rounded border was visible as a white gap
+- **Ko-fi icon in Support settings** — replaced the generic cup SVG with a proper mug + heart illustration
+
+---
+
 ## [1.0.0] - 2026-03-30
 
 ### Added

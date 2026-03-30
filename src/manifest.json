@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Lille Bus — Live Countdown",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "See minutes until your next Lille bus on the toolbar badge. Live data, multi-stop watchers, dark mode & more.",
   "permissions": ["storage", "alarms"],
   "host_permissions": ["https://data.lillemetropole.fr/*"],
