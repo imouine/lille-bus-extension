@@ -635,6 +635,8 @@ async function validateSelection() {
   const stopIds = await getStopIds(draft.stopNorm, draft.lineCode, draft.direction);
   watchers = [{ stopName: draft.stopNorm, lineCode: draft.lineCode, direction: draft.direction, stopIds }];
   await saveWatchers();
+  // Trigger an immediate badge refresh before closing so the badge is up-to-date
+  await chrome.runtime.sendMessage({ type: "badge:refresh" }).catch(() => {});
   globalThis.close();
 }
 

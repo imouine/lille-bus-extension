@@ -231,8 +231,6 @@ main {
   width: 360px;
   padding: 14px;
   background: var(--bg-grad);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
   overflow: hidden;
   animation: popupIn 220ms var(--ease-out) both;
 }
