@@ -7,20 +7,7 @@ and this project follows Semantic Versioning.
 
 ---
 
-## [Unreleased]
-
-### Added
--
-
-### Changed
--
-
-### Fixed
--
-
----
-
-## [1.0.1] - 2026-03-31
+## [Unreleased] — v1.0.1
 
 ### Fixed
 - **Badge not updated after Save** — clicking "Save" now triggers an immediate badge refresh before closing the popup, so the badge no longer stays stuck on `…`
