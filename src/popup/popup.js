@@ -452,11 +452,14 @@ function renderStopSuggestions(items, query) {
   }
 }
 
-function renderLineChoices(lines) {
+async function renderLineChoices(lines) {
   el.lineResults.innerHTML = "";
   const visibleLines = draft.lineCode
     ? lines.filter((l) => l === draft.lineCode)
     : lines;
+
+  // Pre-load schedules once to read route-level metadata
+  const data = await loadSchedules();
 
   for (const line of visibleLines) {
     const li  = document.createElement("li");
@@ -466,14 +469,38 @@ function renderLineChoices(lines) {
     btn.setAttribute("aria-label", `Line ${line}`);
     if (draft.lineCode === line) btn.classList.add("selected");
 
+    // ── Left: colored pill ───────────────────────────────────────────────────
     const pill = document.createElement("span");
     pill.className = "linePill";
     pill.textContent = line;
     const colors = lineColors[line.toUpperCase()];
     if (colors?.bg) pill.style.backgroundColor = colors.bg;
-    if (colors?.fg) pill.style.color = colors.fg;
-
+    if (colors?.fg) pill.style.color           = colors.fg;
     btn.appendChild(pill);
+
+    // ── Right: route info from GTFS (long_name + terminus) ───────────────────
+    const meta = data?.routes?.[line.toUpperCase()] ?? data?.routes?.[line] ?? null;
+    if (meta) {
+      const info = document.createElement("span");
+      info.className = "lineInfo";
+
+      if (meta.long_name) {
+        const name = document.createElement("span");
+        name.className   = "lineRouteName";
+        name.textContent = meta.long_name;
+        info.appendChild(name);
+      }
+
+      if (meta.terminus) {
+        const term = document.createElement("span");
+        term.className   = "lineTerminus";
+        term.textContent = meta.terminus;
+        info.appendChild(term);
+      }
+
+      btn.appendChild(info);
+    }
+
     btn.addEventListener("click", () => onPickLine(line));
     li.appendChild(btn);
     el.lineResults.appendChild(li);
@@ -553,7 +580,7 @@ async function onPickStop(stopNorm) {
   const lines = await getLinesForStop(stopNorm);
   renderStopSuggestions(searchStops(el.stopSearch.value), el.stopSearch.value);
   show(el.lineSection, true);
-  renderLineChoices(lines);
+  await renderLineChoices(lines);
 }
 
 async function onPickLine(lineCode) {
@@ -566,7 +593,7 @@ async function onPickLine(lineCode) {
     el.directionResults.innerHTML = "";
     setStatus("");
     const lines = await getLinesForStop(draft.stopNorm);
-    renderLineChoices(lines);
+    await renderLineChoices(lines);
     return;
   }
 
@@ -577,7 +604,7 @@ async function onPickLine(lineCode) {
   setStatus("");
   const directions = await getDirections(draft.stopNorm, lineCode);
   const lines = await getLinesForStop(draft.stopNorm);
-  renderLineChoices(lines);
+  await renderLineChoices(lines);
   show(el.directionSection, true);
   renderDirectionChoices(directions);
 }

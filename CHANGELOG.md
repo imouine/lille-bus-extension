@@ -15,6 +15,10 @@ and this project follows Semantic Versioning.
 - **Popup rounded corners** — removed the `border-radius` on the popup shell; Chrome already clips the popup to a rectangle, so the rounded border was visible as a white gap
 - **Ko-fi icon in Support settings** — replaced the generic cup SVG with a proper mug + heart illustration
 
+### Improved
+- **Line picker** — each line in the dropdown now shows its full name (e.g. *Liane 5*) and its two terminus endpoints separated by `<>` (e.g. *Marcq Ferme Aux Oies <> Haubourdin Le Parc*), sourced directly from the GTFS `routes.txt` data; this replaces the previous per-stop direction list which was confusing on multi-direction stops
+- **schedules.json** — a new top-level `routes` section stores `long_name` and `terminus` for every bus line, rebuilt from the latest GTFS feed
+
 ---
 
 ## [1.0.0] - 2026-03-30
