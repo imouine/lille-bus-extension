@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Bus Lille Ilévia — Horaires temps réel",
   "version": "1.0.1",
-  "description": "Consultez les horaires de bus à Lille en temps réel avec Ilévia. Compte à rebours sur le badge Chrome, multi-arrêts et mode sombre.",
+  "description": "Consultez les horaires de bus réseau Ilévia dans la métropole lilloise en temps réel. Compte à rebours sur le badge Chrome, suivi multi-arrêts et mode sombre.",
   "permissions": ["storage", "alarms"],
   "host_permissions": ["https://data.lillemetropole.fr/*"],
   "icons": {
