@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Lille Bus — Live Countdown",
+  "name": "Bus Lille Ilévia — Horaires temps réel",
   "version": "1.0.1",
-  "description": "See minutes until your next Lille bus on the toolbar badge. Live data, multi-stop watchers, dark mode & more.",
+  "description": "Consultez les horaires de bus à Lille en temps réel avec Ilévia. Compte à rebours sur le badge Chrome, multi-arrêts et mode sombre.",
   "permissions": ["storage", "alarms"],
   "host_permissions": ["https://data.lillemetropole.fr/*"],
   "icons": {
@@ -12,7 +12,7 @@
     "128": "assets/icons/icon128.png"
   },
   "action": {
-    "default_title": "Lille Bus — Live Countdown",
+    "default_title": "Bus Lille Ilévia — Horaires temps réel",
     "default_icon": {
       "16": "assets/icons/icon16.png",
       "32": "assets/icons/icon32.png",
