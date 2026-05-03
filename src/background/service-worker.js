@@ -507,16 +507,19 @@ async function fetchBestMinutes(watcherList) {
     return { minutes: theo, isLive: false };
   }));
 
-  // Pick the global best across all watchers (prefer live over theoretical)
-  let bestLive = null;
-  let bestTheo = null;
+  // Pick the global best: the smallest minutes value across ALL watchers,
+  // regardless of whether it comes from live or theoretical data.
+  // isLive reflects the source of the winning entry only.
+  let best    = null;
+  let isLive  = false;
   for (const r of perWatcher) {
     if (r.minutes === null) continue;
-    if (r.isLive && (bestLive === null || r.minutes < bestLive)) bestLive = r.minutes;
-    if (!r.isLive && (bestTheo === null || r.minutes < bestTheo)) bestTheo = r.minutes;
+    if (best === null || r.minutes < best) {
+      best   = r.minutes;
+      isLive = r.isLive;
+    }
   }
-  if (bestLive !== null) return { best: bestLive, isLive: true, perWatcher };
-  return { best: bestTheo, isLive: false, perWatcher };
+  return { best, isLive, perWatcher };
 }
 
 // ── Badge refresh ──────────────────────────────────────────────────────────────

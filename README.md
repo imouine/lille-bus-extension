@@ -1,170 +1,172 @@
 <div align="center">
   <img src="src/assets/icons/lille-bus-extension-logo.png" alt="Lille Bus Extension" width="128" />
 
-  <h1>Lille Bus — Live Countdown</h1>
+  <h1>Lille Bus — Compte à rebours en direct</h1>
 
-  <p>A Chrome extension that shows the minutes until your next bus — right on the toolbar badge, in real time.</p>
+  <p>Une extension Chrome qui affiche les minutes avant le prochain bus — directement sur l'icône de la barre d'outils, en temps réel.</p>
 
-  [![Chrome Web Store](https://img.shields.io/badge/Chrome-Web%20Store-4285F4?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/jllciocpnnbaakdcommdoammhifoncme)
-  ![Version](https://img.shields.io/badge/version-1.0.0-brightgreen)
+  [![Chrome Web Store](https://img.shields.io/badge/Chrome-Web%20Store-4285F4?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/kjacdkifcibhcolpbooimeidhhjdlfnk)
+  ![Version](https://img.shields.io/badge/version-1.0.1-brightgreen)
   ![Manifest V3](https://img.shields.io/badge/Manifest-V3-4285F4?logo=googlechrome&logoColor=white)
   ![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue)
   ![MEL Open Data](https://img.shields.io/badge/Data-MEL%20Open%20Data-00a651)
   ![GTFS Ilévia](https://img.shields.io/badge/GTFS-Ilévia-ff6600)
-  [![Ko-fi](https://img.shields.io/badge/Ko--fi-Support-ff5e5b?logo=ko-fi&logoColor=white)](https://ko-fi.com/imouine)
+  [![Ko-fi](https://img.shields.io/badge/Ko--fi-Soutenir-ff5e5b?logo=ko-fi&logoColor=white)](https://ko-fi.com/imouine)
 
 </div>
 
 ---
 
-## ✨ Features
+## ✨ Fonctionnalités
 
-### 🔴 Live badge
-- Displays the **minutes remaining** until the next bus on the Chrome toolbar icon
-- Auto-refreshes at a configurable interval (5s · 10s · 15s · 30s · 60s)
-- **Color-coded urgency** — blue (> 5 min) → orange (≤ 5 min) → red (≤ 1 min)
-- **Glow pulse effect** on the badge when data is live — intensity increases as the bus approaches
-- Automatic fallback to static timetables (grey badge) when the API is unavailable
+### 🔴 Badge en direct
+- Affiche le **temps restant en minutes** avant le prochain bus sur l'icône Chrome
+- Rafraîchissement automatique à intervalle configurable (5s · 10s · 15s · 30s · 60s)
+- **Couleur selon l'urgence** — bleu (> 5 min) → orange (2–5 min) → rouge (≤ 1 min)
+- **Effet de halo pulsant** sur le badge quand les données sont en direct — l'intensité augmente à l'approche du bus
+- Bascule automatique sur les horaires statiques (badge gris) en cas d'indisponibilité de l'API
 
-### 👁️ Multi-watcher
-- **Watch multiple stop / line / direction combinations** at once
-- The badge always shows the **best (minimum) time** across all watchers
-- Each watcher displays its own live countdown with a colored pill, urgency indicator, and live dot (●) or tilde (~) to distinguish real-time from scheduled times
-- Add watchers with **+ Add**, replace all with **Save**, or remove individually with ×
-- **Clear all** button to reset the watchlist in one click
+### 👁️ Multi-surveillance
+- **Surveiller plusieurs combinaisons arrêt / ligne / direction** simultanément
+- Le badge affiche toujours le **meilleur temps (minimum)** parmi tous les suivis
+- Chaque suivi affiche son propre compte à rebours avec une pastille colorée, un indicateur d'urgence, et un point (●) ou un tilde (~) pour distinguer temps réel et horaire théorique
+- Ajouter des suivis avec **+ Ajouter**, valider et fermer avec **Valider**, ou supprimer individuellement avec ×
+- Bouton **Tout supprimer** pour réinitialiser la liste en un clic
 
-### ⏸ Pause / Resume
-- **Pause button** (‖) directly in the popup — stops all API calls
-- Badge displays `II` in grey when paused; watchers show a grey pill
-- State persists across popup closes and browser restarts
+### ⏸ Pause / Reprise
+- **Bouton pause** (‖) directement dans le popup — stoppe tous les appels API
+- Le badge affiche `II` en gris quand en pause ; les suivis affichent une pastille grise
+- L'état persiste après fermeture du popup et redémarrage du navigateur
 
-### ⚙️ Preferences
-| Setting | Options |
+### ⚙️ Préférences
+| Réglage | Description |
 |---|---|
-| Theme | Light / Dark (follows system by default) |
-| Language | Français / English |
-| Refresh interval | 5s · 10s · 15s · 30s · 60s (slider) |
-| Glow effect | Enable / Disable the badge pulse animation |
-| Support | Ko-fi integration — support the project directly from the options page |
+| Mode nuit | Bascule entre le thème clair et sombre (suit le système par défaut) |
+| Langue | Bascule entre Français et English |
+| Fréquence d'actualisation | 5s · 10s · 15s · 30s · 60s (curseur) |
+| Effet de glow | Active / désactive l'animation de pulsation du badge sur les données en direct |
+| Soutenir | Intégration Ko-fi — soutenez le projet directement depuis la page d'options |
 
 ### 🎨 Interface
-- **Collapsible selection** — selecting a stop, line or direction hides the other choices; click again to deselect and change
-- **Official line colors** — lines rendered as colored pills using the Ilévia color scheme
-- **FR / EN** fully localized interface
+- **Sélection rétractable** — sélectionner un arrêt, une ligne ou une direction masque les autres choix ; cliquer à nouveau pour désélectionner et modifier
+- **Couleurs officielles des lignes** — lignes affichées en pastilles colorées selon le schéma Ilévia
+- Interface entièrement localisée **FR / EN**
 
 ---
 
 ## 🚀 Installation
 
-### From the Chrome Web Store *(recommended)*
+### Depuis le Chrome Web Store *(recommandé)*
 
-[![Install from Chrome Web Store](https://img.shields.io/badge/Install%20on-Chrome-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/jllciocpnnbaakdcommdoammhifoncme)
+[![Installer depuis le Chrome Web Store](https://img.shields.io/badge/Installer%20sur-Chrome-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/jllciocpnnbaakdcommdoammhifoncme)
 
-1. Visit the [Chrome Web Store page](https://chromewebstore.google.com/detail/jllciocpnnbaakdcommdoammhifoncme)
-2. Click **Add to Chrome**
-3. Click the extension icon in the toolbar to get started
+1. Rendez-vous sur la [page du Chrome Web Store](https://chromewebstore.google.com/detail/jllciocpnnbaakdcommdoammhifoncme)
+2. Cliquez sur **Ajouter à Chrome**
+3. Cliquez sur l'icône de l'extension dans la barre d'outils pour démarrer
 
-### Developer mode (from source)
+### Mode développeur (depuis les sources)
 
-1. Clone the repository
+1. Cloner le dépôt
    ```bash
    git clone https://github.com/imouine/lille-bus-extension.git
    ```
-2. Open `chrome://extensions` in Chrome
-3. Enable **Developer mode** (top-right toggle)
-4. Click **Load unpacked**
-5. Select the `src/` folder
+2. Ouvrir `chrome://extensions` dans Chrome
+3. Activer le **Mode développeur** (bouton en haut à droite)
+4. Cliquer sur **Charger l'extension non empaquetée**
+5. Sélectionner le dossier `src/`
 
 ---
 
-## 🗺️ Usage
+## 🗺️ Utilisation
 
-### First setup
-1. Click the extension icon
-2. Type your stop name — select it from suggestions
-3. Pick a line, then a direction
-4. Click **+ Add** to watch it (or **Save** to replace the watchlist and close)
+### Premier démarrage
+1. Cliquer sur l'icône de l'extension
+2. Taper le nom de votre arrêt — le sélectionner dans les suggestions
+3. Choisir une ligne, puis une direction
+4. Cliquer sur **+ Ajouter** pour ajouter un suivi supplémentaire (ou **Valider** pour enregistrer et fermer)
 
-The badge starts updating immediately.
+Le badge se met à jour immédiatement.
 
-### Managing watchers
-- **Click a selected item** (stop / line / direction) to deselect and pick another
-- **+ Add** saves the current selection and resets the form to add another watcher
-- **×** on a watcher card removes it individually
-- **Clear all** removes all watchers at once
+### Gérer les suivis
+- **Cliquer sur un élément sélectionné** (arrêt / ligne / direction) pour le désélectionner et en choisir un autre
+- **+ Ajouter** enregistre la sélection courante et réinitialise le formulaire pour en ajouter un autre
+- **×** sur une carte de suivi la supprime individuellement
+- **Tout supprimer** supprime tous les suivis d'un coup
 
 ### Pause
-Click **‖** (next to ⚙️) to pause all refreshes. The badge shows `II` in grey. Click ▶ to resume.
+Cliquer sur **‖** (à côté de ⚙️) pour mettre en pause tous les rafraîchissements. Le badge affiche `II` en gris. Cliquer sur ▶ pour reprendre.
 
 ---
 
-## 🗂️ Project structure
+## 🗂️ Structure du projet
 
 ```
 src/
 ├── manifest.json
 ├── background/
-│   └── service-worker.js     # Badge, alarm, live API, pause animation
+│   └── service-worker.js     # Badge, alarme, API en direct, animation de pause
 ├── popup/
 │   ├── popup.html
 │   ├── popup.css
-│   └── popup.js              # Watchlist UI, stop/line/direction picker
+│   └── popup.js              # Interface de la liste de suivis, sélecteur arrêt/ligne/direction
 ├── options/
 │   ├── options.html
 │   ├── options.css
-│   └── options.js            # Theme, language, refresh interval, glow
+│   └── options.js            # Thème, langue, intervalle de rafraîchissement, halo
 ├── data/
-│   └── schedules.json        # Static timetables + GTFS stop IDs (generated)
+│   └── schedules.json        # Horaires statiques + identifiants GTFS (généré)
 └── assets/
     └── icons/
 
 scripts/
-├── build_schedules.py        # Generates schedules.json from Ilévia GTFS
-├── explore_stop_ids.py       # Verifies GTFS stop_id ↔ API identifiant_station mapping
+├── build_schedules.py        # Génère schedules.json depuis le GTFS Ilévia
+├── explore_stop_ids.py       # Vérifie la correspondance stop_id GTFS ↔ identifiant_station API
 ├── check_direction_match.py
-└── test_direction_match.py
+├── test_direction_match.py
+├── package.sh                # Empaquetage CWS (macOS / Linux)
+└── package.ps1               # Empaquetage CWS (Windows)
 ```
 
 ---
 
-## 📡 Data sources
+## 📡 Sources de données
 
-All data comes from the **Métropole Européenne de Lille (MEL) open data platform** and the **Ilévia GTFS feed**:
+Toutes les données proviennent de la **plateforme open data de la Métropole Européenne de Lille (MEL)** et du **flux GTFS Ilévia** :
 
-| Source | URL | Purpose |
+| Source | URL | Utilisation |
 |---|---|---|
-| `ilevia:prochains_passages` | [MEL Open Data](https://data.lillemetropole.fr) | Real-time next departures (live countdown) |
-| `ilevia:couleurs_lignes` | [MEL Open Data](https://data.lillemetropole.fr) | Official line colors (cached 30 days) |
-| GTFS Feed | [Ilévia GTFS](https://media.ilevia.fr/opendata/gtfs.zip) | Static timetables, stop IDs, routes & trip headsigns |
+| `ilevia:prochains_passages` | [MEL Open Data](https://data.lillemetropole.fr) | Prochains passages en temps réel (compte à rebours) |
+| `ilevia:couleurs_lignes` | [MEL Open Data](https://data.lillemetropole.fr) | Couleurs officielles des lignes (cache 30 jours) |
+| Flux GTFS | [Ilévia GTFS](https://media.ilevia.fr/opendata/gtfs.zip) | Horaires statiques, identifiants d'arrêts, routes et destinations |
 
-Static fallback timetables are built from the **Ilévia GTFS feed** via `scripts/build_schedules.py`. The GTFS data provides stop IDs (`stop_id`) that enable reliable matching with the live API's `identifiant_station`.
+Les horaires de secours statiques sont construits depuis le **flux GTFS Ilévia** via `scripts/build_schedules.py`. Les données GTFS fournissent des identifiants d'arrêt (`stop_id`) permettant une correspondance fiable avec l'`identifiant_station` de l'API en direct.
 
-### Matching strategy
-Live departures are matched using the **GTFS `stop_id`** (stored as `_stopIds` in `schedules.json`), translated to the API's `identifiant_station` format (`ILEVIA:StopPoint:BP:{id}:LOC`). This guarantees accurate matching regardless of text differences between the API's `sens_ligne` and the GTFS headsign (e.g. `"JEAN PAUL SARTRE"` vs `"JP SARTRE"`). A fuzzy text fallback is used for legacy watchers that predate the GTFS stop ID enrichment.
+### Stratégie de correspondance
+Les passages en direct sont mis en correspondance via le **`stop_id` GTFS** (stocké comme `_stopIds` dans `schedules.json`), converti au format `identifiant_station` de l'API (`ILEVIA:StopPoint:BP:{id}:LOC`). Cela garantit une correspondance précise indépendamment des différences textuelles entre le `sens_ligne` de l'API et le headsign GTFS (ex. `"JEAN PAUL SARTRE"` vs `"JP SARTRE"`). Un fallback textuel approximatif est utilisé pour les anciens suivis antérieurs à l'enrichissement GTFS.
 
 ---
 
 ## 🔒 Permissions
 
-| Permission | Reason |
+| Permission | Raison |
 |---|---|
-| `storage` | Persist watchlist, preferences, live results and line color cache |
-| `alarms` | Schedule periodic badge refresh |
-| `https://data.lillemetropole.fr/*` | Fetch live departures and line colors from MEL open data |
+| `storage` | Persister la liste de suivis, les préférences, les résultats en direct et le cache des couleurs de lignes |
+| `alarms` | Planifier le rafraîchissement périodique du badge |
+| `https://data.lillemetropole.fr/*` | Récupérer les passages en direct et les couleurs de lignes depuis la MEL open data |
 
-**No personal data is collected or transmitted.** Everything is stored only in `chrome.storage.local`, on your own machine.
+**Aucune donnée personnelle n'est collectée ou transmise.** Tout est stocké uniquement dans `chrome.storage.local`, sur votre propre machine.
 
 ---
 
-## ⚙️ Regenerating static timetables
+## ⚙️ Régénérer les horaires statiques
 
 ```bash
 python scripts/build_schedules.py
 ```
 
-Downloads the latest Ilévia GTFS feed and regenerates `src/data/schedules.json` with timetables and GTFS stop IDs for all regular bus lines.
+Télécharge le dernier flux GTFS Ilévia et régénère `src/data/schedules.json` avec les horaires et identifiants GTFS pour toutes les lignes de bus régulières.
 
-To verify the GTFS stop ID ↔ API identifier mapping for a specific stop:
+Pour vérifier la correspondance identifiant GTFS ↔ identifiant API pour un arrêt précis :
 
 ```bash
 python scripts/explore_stop_ids.py
@@ -174,41 +176,41 @@ python scripts/explore_stop_ids.py
 
 ## 📋 Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for the full release history.
+Voir [CHANGELOG.md](CHANGELOG.md) pour l'historique complet des versions.
 
 ---
 
-## ❤️ Support
+## ❤️ Soutenir le projet
 
-This project is free and built in my spare time. If you find it useful, consider supporting the development:
+Ce projet est gratuit et développé sur mon temps libre. S'il vous est utile, vous pouvez soutenir son développement :
 
 <a href="https://ko-fi.com/imouine" target="_blank">
-  <img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support on Ko-fi" height="36" />
+  <img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Soutenir sur Ko-fi" height="36" />
 </a>
 
 ---
 
-## 🤝 Contributing
+## 🤝 Contribuer
 
-Contributions are welcome — bug reports, feature ideas, or pull requests.
+Les contributions sont les bienvenues — signalements de bugs, idées de fonctionnalités ou pull requests.
 
-- Read the [Contributing guide](CONTRIBUTING.md) before opening a PR
-- Please follow the [Code of Conduct](CODE_OF_CONDUCT.md)
-
----
-
-## ⚠️ Disclaimer
-
-This project is not affiliated with, endorsed by, or sponsored by Ilévia, the MEL, or any public transport operator. It covers the Lille metropolitan area only and relies exclusively on publicly available open data.
+- Lire le [guide de contribution](CONTRIBUTING.md) avant d'ouvrir une PR
+- Merci de respecter le [Code de conduite](CODE_OF_CONDUCT.md)
 
 ---
 
-## 📄 License
+## ⚠️ Avertissement
+
+Ce projet n'est pas affilié à Ilévia, la MEL ou tout autre opérateur de transport en commun, et n'est ni approuvé ni sponsorisé par eux. Il couvre uniquement la métropole lilloise et s'appuie exclusivement sur des données ouvertes publiquement disponibles.
+
+---
+
+## 📄 Licence
 
 [GPL-3.0](LICENSE) — © imouine
 
 ---
 
-## 🔐 Privacy
+## 🔐 Confidentialité
 
-[Privacy Policy](PRIVACY_POLICY.md) — No data collection, no tracking, no cookies. Everything stays on your machine.
+[Politique de confidentialité](PRIVACY_POLICY.md) — Aucune collecte de données, aucun tracking, aucun cookie. Tout reste sur votre machine.

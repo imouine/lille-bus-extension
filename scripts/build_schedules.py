@@ -12,6 +12,12 @@ Strategy:
 Output format:
   {
     "meta": { "generated", "gtfs_from", "gtfs_until", "source", "profiles" },
+    "routes": {
+      "LINE_CODE": {
+        "long_name": "LIANE 5",
+        "terminus":  "MARCQ FERME AUX OIES / HAUBOURDIN LE PARC"
+      }
+    },
     "stops": {
       "STOP_NORM_UPPER": {
         "LINE_CODE": {
@@ -119,11 +125,22 @@ def main():
 
     # ── Read routes.txt ─────────────────────────────────────────────────────
     print("Reading routes.txt ...")
-    bus_routes = {}
+    bus_routes = {}    # route_id -> line_code (short name)
+    route_meta = {}    # line_code -> {long_name, terminus}
     with z.open("routes.txt") as f:
         for row in csv.DictReader(io.TextIOWrapper(f, encoding="utf-8-sig")):
             if is_regular_bus(row.get("route_short_name", ""), row.get("route_type", "3")):
-                bus_routes[row["route_id"]] = row["route_short_name"].strip().upper()
+                code = row["route_short_name"].strip().upper()
+                bus_routes[row["route_id"]] = code
+                long_name = row.get("route_long_name", "").strip()
+                terminus  = row.get("route_desc", "").strip()
+                # Title-case both fields for display
+                long_name = long_name.title() if long_name else ""
+                # Normalize terminus: split on any "/" or "<>" separator, clean each part, rejoin with " <> "
+                terminus = terminus.title() if terminus else ""
+                parts = [p.strip() for p in re.split(r'\s*[/<>]+\s*', terminus) if p.strip()]
+                terminus = " <> ".join(parts) if len(parts) > 1 else (parts[0] if parts else "")
+                route_meta[code] = {"long_name": long_name, "terminus": terminus}
     print(f"  {len(bus_routes)} bus routes")
 
     # ── Read trips.txt ──────────────────────────────────────────────────────
@@ -249,6 +266,7 @@ def main():
             "source": GTFS_URL,
             "profiles": profiles,
         },
+        "routes": route_meta,
         "stops": out_stops,
     }
 

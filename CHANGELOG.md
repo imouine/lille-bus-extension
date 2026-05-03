@@ -7,16 +7,17 @@ and this project follows Semantic Versioning.
 
 ---
 
-## [Unreleased]
-
-### Added
--
-
-### Changed
--
+## [Unreleased] — v1.0.1
 
 ### Fixed
--
+- **Badge not updated after Save** — clicking "Save" now triggers an immediate badge refresh before closing the popup, so the badge no longer stays stuck on `…`
+- **Wrong bus shown in badge with mixed live/theoretical watchers** — the badge now always displays the true minimum arrival time across all watchers; previously a live arrival in 6 min would incorrectly override a theoretical arrival in 3 min
+- **Popup rounded corners** — removed the `border-radius` on the popup shell; Chrome already clips the popup to a rectangle, so the rounded border was visible as a white gap
+- **Ko-fi icon in Support settings** — replaced the generic cup SVG with a proper mug + heart illustration
+
+### Improved
+- **Line picker** — each line in the dropdown now shows its full name (e.g. *Liane 5*) and its two terminus endpoints separated by `<>` (e.g. *Marcq Ferme Aux Oies <> Haubourdin Le Parc*), sourced directly from the GTFS `routes.txt` data; this replaces the previous per-stop direction list which was confusing on multi-direction stops
+- **schedules.json** — a new top-level `routes` section stores `long_name` and `terminus` for every bus line, rebuilt from the latest GTFS feed
 
 ---
 
