@@ -1,14 +1,14 @@
-# Privacy Policy — Lille Bus Extension
+# Privacy Policy — Bus Lille Ilévia
 
-**Last updated:** March 26, 2026
+**Last updated:** November 13, 2026
 
 ## Overview
 
-Lille Bus Extension is a free, open-source Chrome extension that displays real-time bus arrival times for the Lille metropolitan area (France). This policy explains what data the extension accesses and how it is handled.
+Bus Lille Ilévia is a free, open-source Chrome extension that displays real-time bus arrival times for the Lille metropolitan area (France). This policy explains what data the extension accesses and how it is handled.
 
 ## Data collection
 
-**Lille Bus Extension does not collect, transmit, or store any personal data.**
+**Bus Lille Ilévia does not collect, sell, or store personal data on servers controlled by the developer.**
 
 The extension does not:
 - Collect your browsing history
@@ -19,23 +19,23 @@ The extension does not:
 
 ## Network requests
 
-The extension makes requests to **one single endpoint**:
+The extension makes automatic requests to **one single domain**:
 
 | Domain | Purpose |
 |---|---|
 | `data.lillemetropole.fr` | Fetch real-time bus departures and official line colors from the MEL (Métropole Européenne de Lille) open data API |
 
-These requests contain only the stop name being queried. No user identifiers, tokens, or personal data are included in any request.
+These requests contain the public identifiers of the transit stops in the watchlist, as required to retrieve their departures. They do not contain a user identifier, authentication token, browsing history, precise location, or the other locally stored preferences. As with any web request, the MEL service may technically receive network metadata such as the user's IP address; the extension developer does not receive or store it.
 
 ## Local storage
 
 The extension uses `chrome.storage.local` to persist:
 
 - Your selected stop/line/direction combinations (watchlist)
-- Your preferences (theme, language, refresh interval, glow effect)
-- Cached API responses (live departure times, line colors)
+- Your preferences (theme, language, refresh interval)
+- Cached API responses (live departure times, status timestamps, line colors)
 
-All data is stored **locally on your machine** and is never transmitted anywhere.
+This data is stored **locally on your machine**. Only the public transit stop identifiers needed for a live-data query are sent to the MEL API, as described above.
 
 ## Permissions
 
@@ -47,7 +47,9 @@ All data is stored **locally on your machine** and is never transmitted anywhere
 
 ## Third-party services
 
-The extension relies solely on the [MEL Open Data platform](https://data.lillemetropole.fr) and the [Ilévia GTFS feed](https://media.ilevia.fr/opendata/gtfs.zip). No other third-party services are used.
+Automatic network requests are limited to the [MEL Open Data platform](https://data.lillemetropole.fr). The Ilévia GTFS feed is downloaded only when the project maintainer rebuilds the embedded fallback schedules; the installed extension does not download it automatically.
+
+The options page contains user-initiated links to the project source code, issue tracker, and privacy policy on GitHub. GitHub is contacted only if the user chooses to open one of these links. All images displayed by the extension itself are bundled locally.
 
 ## Open source
 

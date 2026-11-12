@@ -1,4 +1,4 @@
-# Contributing to Lille Bus Extension
+# Contributing to Bus Lille Ilévia
 
 First off — thank you for taking the time to contribute! 🎉
 
@@ -70,9 +70,16 @@ Feature ideas are welcome. Before opening a large pull request, please **open an
 
 2. Make your changes and test them locally in Chrome
 
-3. Keep commits focused — one logical change per commit
+3. Run the automated checks
 
-4. Open a pull request against `main` with a clear description of what changed and why
+   ```bash
+   npm run check
+   ./scripts/package.sh
+   ```
+
+4. Keep commits focused — one logical change per commit
+
+5. Open a pull request against `main` with a clear description of what changed and why
 
 ---
 

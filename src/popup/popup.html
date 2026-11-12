@@ -1,93 +1,113 @@
-<!--
-  Lille Bus Extension
-  Author: imouine
-  Copyright (c) 2026
-  License: GPL-3.0
-  https://github.com/imouine/lille-bus-extension
--->
-
 <!doctype html>
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Lille Bus</title>
+    <title>Bus Lille Ilévia</title>
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
-    <main>
-      <section aria-label="Choix de l'arrêt">
-        <label for="stopSearch" data-i18n="label_stop">Arrêt</label>
-        <input
-          id="stopSearch"
-          type="text"
-          placeholder="Tape le nom de l’arrêt"
-          data-i18n-placeholder="placeholder_stop"
-          autocomplete="off"
-          spellcheck="false"
-        />
-        <div id="stopHint" class="hint"></div>
-        <ul id="stopResults" class="list" role="listbox" aria-label="Suggestions d’arrêts"></ul>
-      </section>
-
-      <section id="lineSection" class="hidden" aria-label="Choix de la ligne">
-        <div class="sectionTitle" data-i18n="title_line">Ligne</div>
-        <ul id="lineResults" class="list"></ul>
-      </section>
-
-      <section id="directionSection" class="hidden" aria-label="Choix du sens">
-        <div class="sectionTitle" data-i18n="title_direction">Sens</div>
-        <ul id="directionResults" class="list"></ul>
-      </section>
-
-      <section id="validateSection" class="hidden" aria-label="Validation">
-        <div id="summary" class="summary"></div>
-        <div class="validateRow">
-          <button id="addWatcherBtn" type="button" data-i18n="btn_add">+ Ajouter</button>
-          <button id="validateBtn"   type="button" data-i18n="btn_validate">Valider</button>
+    <main class="appShell">
+      <header class="appHeader">
+        <img src="../assets/icons/icon-v2-48.png" alt="" class="appLogo" />
+        <div class="appHeading">
+          <h1>Bus Lille Ilévia</h1>
+          <div class="syncLine">
+            <span id="liveDot" class="liveDot" aria-hidden="true"></span>
+            <span id="syncStatus">Initialisation…</span>
+          </div>
         </div>
-      </section>
+        <button id="refreshBtn" class="iconBtn" type="button" aria-label="Actualiser">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 6v5h-5M4 18v-5h5M18.2 9A7 7 0 0 0 6.4 6.4L4 9m16 6-2.4 2.6A7 7 0 0 1 5.8 15" />
+          </svg>
+        </button>
+      </header>
 
-      <div id="status" class="status" role="status" aria-live="polite"></div>
+      <div id="globalNotice" class="notice hidden" role="status" aria-live="polite"></div>
 
-      <!-- Liste des combinaisons surveillées -->
-      <section id="watchersSection" class="hidden" aria-label="Combinaisons surveillées">
-        <div class="watchersHeader">
-          <span class="sectionTitle" data-i18n="label_watchers">Surveillés</span>
-          <button id="clearWatchersBtn" class="clearWatchersBtn" type="button" data-i18n="btn_clear_all">Tout supprimer</button>
+      <section id="watchersSection" class="dashboard" aria-labelledby="watchersTitle">
+        <div class="sectionHeader">
+          <div>
+            <p class="eyebrow" id="watchersTitle" data-i18n="label_watchers">Mes trajets</p>
+            <p id="watchersCount" class="sectionMeta"></p>
+          </div>
+          <button id="clearWatchersBtn" class="textBtn danger hidden" type="button" data-i18n="btn_clear_all">
+            Tout supprimer
+          </button>
         </div>
-        <ul id="watchersList" class="watchersList"></ul>
+
+        <div id="emptyState" class="emptyState">
+          <div class="emptyIcon" aria-hidden="true">⌁</div>
+          <h2 data-i18n="empty_title">Votre prochain bus, en un coup d’œil</h2>
+          <p data-i18n="empty_desc">Ajoutez un trajet pour afficher ses prochains passages ici et sur le badge Chrome.</p>
+        </div>
+
+        <ul id="watchersList" class="watchersList" aria-label="Trajets surveillés"></ul>
       </section>
 
-      <div class="settingsRow">
-        <button id="pauseBtn" class="settingsBtn pauseBtn" type="button" aria-label="Pause refresh" aria-pressed="false">
-          <!-- icône pause (affichée quand actif) -->
-          <svg class="icon-pause" width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-            <rect x="4"  y="3" width="4" height="14" rx="1.5" fill="currentColor"/>
-            <rect x="12" y="3" width="4" height="14" rx="1.5" fill="currentColor"/>
-          </svg>
-          <!-- icône play (affichée quand en pause) -->
-          <svg class="icon-play" width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-            <path d="M5 3.5 L16 10 L5 16.5 Z" fill="currentColor"/>
-          </svg>
+      <button id="togglePlannerBtn" class="primaryBtn addTripToggle" type="button" aria-expanded="false">
+        <span aria-hidden="true">＋</span>
+        <span data-i18n="btn_open_add">Ajouter un trajet</span>
+      </button>
+
+      <section id="plannerSection" class="planner hidden" aria-labelledby="plannerTitle">
+        <div class="plannerHeader">
+          <div>
+            <p class="eyebrow" id="plannerTitle" data-i18n="planner_title">Nouveau trajet</p>
+            <p class="sectionMeta" data-i18n="planner_desc">Arrêt, ligne puis direction</p>
+          </div>
+          <button id="closePlannerBtn" class="iconBtn small" type="button" aria-label="Fermer">×</button>
+        </div>
+
+        <div class="fieldGroup">
+          <label for="stopSearch" data-i18n="label_stop">Arrêt</label>
+          <input
+            id="stopSearch"
+            type="search"
+            placeholder="Rechercher un arrêt"
+            data-i18n-placeholder="placeholder_stop"
+            autocomplete="off"
+            spellcheck="false"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-controls="stopResults"
+            aria-expanded="false"
+          />
+          <div id="stopHint" class="hint"></div>
+          <ul id="stopResults" class="choiceList" role="listbox" aria-label="Suggestions d’arrêts"></ul>
+        </div>
+
+        <div id="lineSection" class="fieldGroup hidden">
+          <p class="fieldLabel" data-i18n="title_line">Ligne</p>
+          <ul id="lineResults" class="choiceList"></ul>
+        </div>
+
+        <div id="directionSection" class="fieldGroup hidden">
+          <p class="fieldLabel" data-i18n="title_direction">Direction</p>
+          <ul id="directionResults" class="choiceList"></ul>
+        </div>
+
+        <div id="selectionSummary" class="selectionSummary hidden"></div>
+        <button id="addWatcherBtn" class="primaryBtn hidden" type="button" data-i18n="btn_add_trip">
+          Ajouter ce trajet
+        </button>
+        <div id="plannerStatus" class="plannerStatus" role="status" aria-live="polite"></div>
+      </section>
+
+      <footer class="appFooter">
+        <button id="pauseBtn" class="footerBtn" type="button" aria-pressed="false">
+          <svg class="pauseIcon" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 4h3v12H5zm7 0h3v12h-3z" /></svg>
+          <svg class="playIcon" viewBox="0 0 20 20" aria-hidden="true"><path d="m6 4 10 6-10 6z" /></svg>
           <span id="pauseBtnLabel" data-i18n="btn_pause">Pause</span>
         </button>
-
-        <button id="openOptionsBtn" class="settingsBtn" type="button">
-          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-            <circle cx="10" cy="10" r="3" stroke="currentColor" stroke-width="1.6"/>
-            <path d="M10 1.5v2M10 16.5v2M18.5 10h-2M3.5 10h-2M15.95 4.05l-1.41 1.41M5.46 14.54l-1.41 1.41M15.95 15.95l-1.41-1.41M5.46 5.46L4.05 4.05" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-            <circle cx="10" cy="10" r="6" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2.8 1.95"/>
-          </svg>
+        <button id="openOptionsBtn" class="footerBtn" type="button">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm0-5v2m0 12v2M2 10h2m12 0h2M4.3 4.3l1.4 1.4m8.6 8.6 1.4 1.4m0-11.4-1.4 1.4m-8.6 8.6-1.4 1.4" /></svg>
           <span data-i18n="btn_settings">Préférences</span>
         </button>
-      </div>
-
-      <div class="supportRow">
-        <a href="https://ko-fi.com/imouine" target="_blank" rel="noopener" class="supportLink" data-i18n="link_support">❤️ Support</a>
-      </div>
+      </footer>
     </main>
 
-    <script src="popup.js"></script>
+    <script type="module" src="popup.js"></script>
   </body>
 </html>

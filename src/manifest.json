@@ -1,28 +1,31 @@
 {
   "manifest_version": 3,
-  "name": "Bus Lille Ilévia — Horaires temps réel",
-  "version": "1.0.1",
-  "description": "Consultez les horaires de bus Ilévia en temps réel. Temps d’attente sur le badge Chrome, suivi multi-arrêts et mode sombre.",
+  "name": "__MSG_extensionName__",
+  "version": "1.0.2",
+  "minimum_chrome_version": "120",
+  "description": "__MSG_extensionDescription__",
+  "default_locale": "fr",
   "permissions": ["storage", "alarms"],
   "host_permissions": ["https://data.lillemetropole.fr/*"],
   "icons": {
-    "16": "assets/icons/icon16.png",
-    "32": "assets/icons/icon32.png",
-    "48": "assets/icons/icon48.png",
-    "128": "assets/icons/icon128.png"
+    "16": "assets/icons/icon-v2-16.png",
+    "32": "assets/icons/icon-v2-32.png",
+    "48": "assets/icons/icon-v2-48.png",
+    "128": "assets/icons/icon-v2-128.png"
   },
   "action": {
-    "default_title": "Bus Lille Ilévia — Horaires temps réel",
+    "default_title": "__MSG_extensionActionTitle__",
     "default_icon": {
-      "16": "assets/icons/icon16.png",
-      "32": "assets/icons/icon32.png",
-      "48": "assets/icons/icon48.png",
-      "128": "assets/icons/icon128.png"
+      "16": "assets/icons/icon-v2-16.png",
+      "32": "assets/icons/icon-v2-32.png",
+      "48": "assets/icons/icon-v2-48.png",
+      "128": "assets/icons/icon-v2-128.png"
     },
     "default_popup": "popup/popup.html"
   },
   "background": {
-    "service_worker": "background/service-worker.js"
+    "service_worker": "background/service-worker.js",
+    "type": "module"
   },
   "options_page": "options/options.html"
 }

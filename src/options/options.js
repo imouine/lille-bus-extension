@@ -1,222 +1,195 @@
-/*
- * Lille Bus Extension — Options
- * Author: imouine
- * Copyright (c) 2026
- * License: GPL-3.0
- * https://github.com/imouine/lille-bus-extension
- */
-
-const STORAGE_KEY_PREFS = "prefs";
-
-const REFRESH_STEPS_MIN   = [1/12, 1/6, 1/4, 0.5, 1];
-const REFRESH_STEPS_LABEL = ["5s", "10s", "15s", "30s", "60s"];
-const DEFAULT_REFRESH_IDX = 4;
+import {
+  DEFAULT_REFRESH_IDX,
+  REFRESH_STEPS_LABEL,
+  REFRESH_STEPS_MIN,
+  STORAGE_KEYS,
+  normalizePrefs,
+} from "../lib/config.js";
 
 const I18N = {
   fr: {
-    nav_appearance:        "Apparence",
-    nav_refresh:           "Actualisation",
-    nav_about:             "À propos",
-    label_appearance:      "Apparence",
-    desc_appearance:       "Personnalisez l'apparence de l'extension.",
-    label_theme:           "Mode nuit",
-    hint_theme:            "Alterner entre le thème clair et sombre",
-    label_lang:            "English",
-    hint_lang:             "Changer la langue de l'interface",
-    label_refresh_section: "Actualisation",
-    desc_refresh:          "Contrôlez la fréquence de mise à jour des horaires.",
-    label_refresh:         "Fréquence d'actualisation",
-    label_glow:            "Effet de glow",
-    hint_glow:             "Animer le badge pour indiquer les données en direct",
-    label_about:           "À propos",
-    desc_about:            "Une extension open-source pour les transports en commun de la Métropole Lilloise.",
-    author_role:           "Créateur & Mainteneur",
-    meta_version:          "Version",
-    meta_license:          "Licence",
-    meta_source:           "Code source",
-    meta_data:             "Données",
-    meta_gtfs:             "GTFS",
-    saved:                 "Préférences enregistrées",
-    nav_support:           "Soutenir",
-    label_support:         "Soutenir",
-    desc_support:          "Ce projet est gratuit et développé sur mon temps personnel. Votre soutien m'aide à l'améliorer et à ajouter de nouvelles fonctionnalités.",
-    kofi_title:            "Soutenir le projet",
-    kofi_desc:             "Aidez-moi à continuer d'améliorer et de maintenir cet outil.",
-    kofi_btn_text:         "Soutenir le projet",
+    documentTitle: "Préférences — Bus Lille Ilévia",
+    pageSubtitle: "Préférences de l’extension",
+    settingsTitle: "Préférences",
+    settingsDesc: "Adaptez l’interface à vos habitudes.",
+    labelTheme: "Mode sombre",
+    hintTheme: "Utiliser le thème sombre dans le popup et cette page",
+    labelLang: "Interface en anglais",
+    hintLang: "Afficher les textes de l’extension en anglais",
+    refreshTitle: "Données en direct",
+    refreshDesc: "Réglez la fréquence de mise à jour des prochains passages.",
+    labelRefresh: "Fréquence d’actualisation",
+    colorLegendTitle: "Code couleur",
+    colorLegendDesc: "Couleur du badge et du prochain passage affiché.",
+    colorBlueLabel: "Bleu",
+    colorBlueDesc: "Plus de 5 minutes · temps réel",
+    colorOrangeLabel: "Orange",
+    colorOrangeDesc: "Entre 2 et 5 minutes · temps réel",
+    colorRedLabel: "Rouge",
+    colorRedDesc: "Dans 1 minute ou à l’approche",
+    colorGrayLabel: "Gris",
+    colorGrayDesc: "Horaire théorique, sans temps réel",
+    aboutTitle: "À propos",
+    aboutDesc: "Extension open source pour consulter les prochains bus de la métropole lilloise.",
+    sourceLink: "Code source",
+    issueLink: "Signaler un problème",
+    privacyLink: "Confidentialité",
+    resetBtn: "Rétablir les réglages par défaut",
+    dataNote: "Extension indépendante, non affiliée à Ilévia ou à la MEL. Données ouvertes MEL et Ilévia.",
+    saved: "Préférences enregistrées",
+    resetSaved: "Réglages par défaut rétablis",
+    versionLabel: "Version {version}",
   },
   en: {
-    nav_appearance:        "Appearance",
-    nav_refresh:           "Refresh",
-    nav_about:             "About",
-    label_appearance:      "Appearance",
-    desc_appearance:       "Customize the look and feel of the extension.",
-    label_theme:           "Night mode",
-    hint_theme:            "Switch between light and dark themes",
-    label_lang:            "Français",
-    hint_lang:             "Change the interface language",
-    label_refresh_section: "Refresh",
-    desc_refresh:          "Control how often bus times are updated.",
-    label_refresh:         "Refresh interval",
-    label_glow:            "Glow effect",
-    hint_glow:             "Animate the badge to indicate live data",
-    label_about:           "About",
-    desc_about:            "An open-source extension for Lille Metropole public transport.",
-    author_role:           "Creator & Maintainer",
-    meta_version:          "Version",
-    meta_license:          "License",
-    meta_source:           "Source code",
-    meta_data:             "Data",
-    meta_gtfs:             "GTFS",
-    saved:                 "Preferences saved",
-    nav_support:           "Support",
-    label_support:         "Support",
-    desc_support:          "This project is free and built in my spare time. Your support helps me improve it and add new features.",
-    kofi_title:            "Support the project",
-    kofi_desc:             "Help me keep improving and maintaining this tool.",
-    kofi_btn_text:         "Support the project",
+    documentTitle: "Preferences — Bus Lille Ilévia",
+    pageSubtitle: "Extension preferences",
+    settingsTitle: "Preferences",
+    settingsDesc: "Adjust the interface to your habits.",
+    labelTheme: "Dark mode",
+    hintTheme: "Use the dark theme in the popup and on this page",
+    labelLang: "Interface in English",
+    hintLang: "Display the extension interface in English",
+    refreshTitle: "Live data",
+    refreshDesc: "Choose how often upcoming departures are refreshed.",
+    labelRefresh: "Refresh interval",
+    colorLegendTitle: "Colour guide",
+    colorLegendDesc: "Colour used for the badge and the next displayed departure.",
+    colorBlueLabel: "Blue",
+    colorBlueDesc: "More than 5 minutes · live",
+    colorOrangeLabel: "Orange",
+    colorOrangeDesc: "Between 2 and 5 minutes · live",
+    colorRedLabel: "Red",
+    colorRedDesc: "1 minute or arriving now",
+    colorGrayLabel: "Grey",
+    colorGrayDesc: "Scheduled time without live data",
+    aboutTitle: "About",
+    aboutDesc: "An open-source extension for upcoming buses in the Lille metropolitan area.",
+    sourceLink: "Source code",
+    issueLink: "Report an issue",
+    privacyLink: "Privacy",
+    resetBtn: "Restore default settings",
+    dataNote: "Independent extension, not affiliated with Ilévia or MEL. Open data from MEL and Ilévia.",
+    saved: "Preferences saved",
+    resetSaved: "Default settings restored",
+    versionLabel: "Version {version}",
   },
 };
 
-let prefs = { theme: "light", lang: "fr", refreshIdx: DEFAULT_REFRESH_IDX, glowEnabled: true };
+const elements = Object.fromEntries([
+  "pageSubtitle",
+  "extensionVersion",
+  "settingsTitle",
+  "settingsDesc",
+  "labelTheme",
+  "hintTheme",
+  "themeToggle",
+  "labelLang",
+  "hintLang",
+  "langToggle",
+  "refreshTitle",
+  "refreshDesc",
+  "labelRefresh",
+  "refreshSlider",
+  "refreshValue",
+  "colorLegendTitle",
+  "colorLegendDesc",
+  "colorBlueLabel",
+  "colorBlueDesc",
+  "colorOrangeLabel",
+  "colorOrangeDesc",
+  "colorRedLabel",
+  "colorRedDesc",
+  "colorGrayLabel",
+  "colorGrayDesc",
+  "aboutTitle",
+  "aboutDesc",
+  "sourceLink",
+  "issueLink",
+  "privacyLink",
+  "resetBtn",
+  "dataNote",
+  "savedMsg",
+].map((id) => [id, document.getElementById(id)]));
 
-function t(key) {
-  const dict = I18N[prefs.lang] || I18N.fr;
-  return dict[key] || I18N.fr[key] || key;
-}
+const systemPrefersDark = () => globalThis.matchMedia("(prefers-color-scheme: dark)").matches;
+let prefs = normalizePrefs(null, systemPrefersDark());
 
-/** Apply translated text to all elements with matching IDs */
-function applyI18n() {
-  const keys = Object.keys(I18N.fr);
-  for (const key of keys) {
-    const el = document.getElementById(key);
-    if (el) el.textContent = t(key);
+function t(key, values = {}) {
+  let value = I18N[prefs.lang]?.[key] ?? I18N.fr[key] ?? key;
+  for (const [name, replacement] of Object.entries(values)) {
+    value = value.replaceAll(`{${name}}`, replacement);
   }
+  return value;
 }
 
-function applyTheme() {
-  document.documentElement.dataset.theme = prefs.theme;
-  document.getElementById("themeToggle").checked = prefs.theme === "dark";
-}
-
-function applyLanguage() {
+function applyI18n() {
   document.documentElement.lang = prefs.lang;
-  document.getElementById("langToggle").checked = prefs.lang === "en";
+  document.title = t("documentTitle");
+  for (const key of Object.keys(I18N.fr)) {
+    if (elements[key]) elements[key].textContent = t(key);
+  }
+  const version = chrome.runtime.getManifest().version;
+  elements.extensionVersion.setAttribute("aria-label", t("versionLabel", { version }));
+}
+
+function applyPreferences() {
+  document.documentElement.dataset.theme = prefs.theme;
+  elements.themeToggle.checked = prefs.theme === "dark";
+  elements.langToggle.checked = prefs.lang === "en";
+
+  const index = Number.isInteger(prefs.refreshIdx) ? prefs.refreshIdx : DEFAULT_REFRESH_IDX;
+  elements.refreshSlider.value = String(index);
+  elements.refreshValue.textContent = REFRESH_STEPS_LABEL[index];
+  elements.refreshSlider.style.setProperty("--pct", `${(index / (REFRESH_STEPS_MIN.length - 1)) * 100}%`);
   applyI18n();
 }
 
-function applyRefresh() {
-  const idx    = prefs.refreshIdx ?? DEFAULT_REFRESH_IDX;
-  const slider = document.getElementById("refreshSlider");
-  const label  = document.getElementById("refreshValue");
-  slider.value = idx;
-  label.textContent = REFRESH_STEPS_LABEL[idx];
-  const pct = (idx / (REFRESH_STEPS_MIN.length - 1)) * 100;
-  slider.style.setProperty("--pct", `${pct}%`);
+function showToast(message) {
+  elements.savedMsg.textContent = message;
+  elements.savedMsg.classList.add("visible");
+  clearTimeout(showToast.timeoutId);
+  showToast.timeoutId = setTimeout(() => elements.savedMsg.classList.remove("visible"), 1800);
 }
 
-function applyGlow() {
-  document.getElementById("glowToggle").checked = prefs.glowEnabled !== false;
+async function savePrefs(messageKey = "saved") {
+  await chrome.storage.local.set({ [STORAGE_KEYS.prefs]: prefs });
+  await chrome.runtime.sendMessage({ type: "prefs:refreshInterval" }).catch(() => null);
+  showToast(t(messageKey));
 }
 
-function showSaved() {
-  const el = document.getElementById("savedMsg");
-  el.textContent = t("saved");
-  el.classList.add("visible");
-  clearTimeout(el._timer);
-  el._timer = setTimeout(() => el.classList.remove("visible"), 2000);
-}
-
-async function loadPrefs() {
-  const result = await chrome.storage.local.get([STORAGE_KEY_PREFS]);
-  const stored = result[STORAGE_KEY_PREFS];
-  if (stored) {
-    if (stored.theme === "dark" || stored.theme === "light") prefs.theme = stored.theme;
-    else prefs.theme = globalThis.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    if (stored.lang === "en" || stored.lang === "fr") prefs.lang = stored.lang;
-    if (Number.isInteger(stored.refreshIdx) && stored.refreshIdx >= 0 && stored.refreshIdx < REFRESH_STEPS_MIN.length) {
-      prefs.refreshIdx = stored.refreshIdx;
-    }
-    prefs.glowEnabled = stored.glowEnabled !== false;
-  } else {
-    prefs.theme = globalThis.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-  }
-}
-
-async function savePrefs() {
-  await chrome.storage.local.set({ [STORAGE_KEY_PREFS]: prefs });
-  chrome.runtime.sendMessage({
-    type: "prefs:refreshInterval",
-    periodInMinutes: REFRESH_STEPS_MIN[prefs.refreshIdx],
-  }).catch(() => {});
-  showSaved();
-}
-
-// ─── Navigation ────────────────────────────────────────────────────────────────
-function setupNav() {
-  const navItems = document.querySelectorAll(".nav-item[data-section]");
-  const sections = document.querySelectorAll(".card[id^='section-']");
-
-  function activate(sectionName) {
-    navItems.forEach((item) => item.classList.toggle("active", item.dataset.section === sectionName));
-    sections.forEach((sec) => {
-      const name = sec.id.replace("section-", "");
-      if (name === sectionName) {
-        sec.style.display = "";
-        sec.style.animation = "none";
-        // Force reflow to restart animation
-        sec.offsetHeight;
-        sec.style.animation = "";
-      } else {
-        sec.style.display = "none";
-      }
-    });
-  }
-
-  navItems.forEach((item) => {
-    item.addEventListener("click", (e) => {
-      e.preventDefault();
-      activate(item.dataset.section);
-    });
+function bindEvents() {
+  elements.themeToggle.addEventListener("change", async (event) => {
+    prefs.theme = event.target.checked ? "dark" : "light";
+    applyPreferences();
+    await savePrefs();
   });
 
-  // Show first section, hide others
-  activate("appearance");
+  elements.langToggle.addEventListener("change", async (event) => {
+    prefs.lang = event.target.checked ? "en" : "fr";
+    applyPreferences();
+    await savePrefs();
+  });
+
+  elements.refreshSlider.addEventListener("input", (event) => {
+    prefs.refreshIdx = Number(event.target.value);
+    applyPreferences();
+  });
+  elements.refreshSlider.addEventListener("change", () => savePrefs());
+
+  elements.resetBtn.addEventListener("click", async () => {
+    prefs = normalizePrefs(null, systemPrefersDark());
+    applyPreferences();
+    await savePrefs("resetSaved");
+  });
 }
 
-// ─── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
-  await loadPrefs();
-  applyTheme();
-  applyLanguage();
-  applyRefresh();
-  applyGlow();
-  setupNav();
-
-  document.getElementById("themeToggle").addEventListener("change", async (e) => {
-    prefs.theme = e.target.checked ? "dark" : "light";
-    applyTheme();
-    await savePrefs();
-  });
-
-  document.getElementById("langToggle").addEventListener("change", async (e) => {
-    prefs.lang = e.target.checked ? "en" : "fr";
-    applyLanguage();
-    await savePrefs();
-  });
-
-  document.getElementById("refreshSlider").addEventListener("input", (e) => {
-    prefs.refreshIdx = Number(e.target.value);
-    applyRefresh();
-  });
-
-  document.getElementById("refreshSlider").addEventListener("change", async () => {
-    await savePrefs();
-  });
-
-  document.getElementById("glowToggle").addEventListener("change", async (e) => {
-    prefs.glowEnabled = e.target.checked;
-    await savePrefs();
-  });
+  const version = chrome.runtime.getManifest().version;
+  elements.extensionVersion.textContent = `v${version}`;
+  const { [STORAGE_KEYS.prefs]: stored } = await chrome.storage.local.get([STORAGE_KEYS.prefs]);
+  prefs = normalizePrefs(stored, systemPrefersDark());
+  applyPreferences();
+  bindEvents();
 }
 
-init();
+init().catch((error) => console.error("Options initialization failed", error));

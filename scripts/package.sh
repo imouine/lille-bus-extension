@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Lille Bus Extension - Chrome Web Store Packaging Script
+# Bus Lille Ilévia - Chrome Web Store Packaging Script
 # Creates a clean .zip of the src/ folder ready for CWS upload.
 # Usage:  ./scripts/package.sh
 # Output: dist/lille-bus-extension-v{version}.zip
@@ -12,8 +12,10 @@ DIST_DIR="$ROOT/dist"
 
 VERSION=$(python3 -c "import json; print(json.load(open('$SRC_DIR/manifest.json'))['version'])")
 
+python3 "$ROOT/scripts/validate_release.py"
+
 echo ""
-echo "  Lille Bus Extension - Packaging"
+echo "  Bus Lille Ilévia - Packaging"
 echo "  Version: $VERSION"
 echo ""
 
@@ -27,7 +29,10 @@ if [ -f "$ZIP_PATH" ]; then
 fi
 
 echo "  Zipping src/ ..."
-(cd "$SRC_DIR" && zip -r -9 "$ZIP_PATH" .)
+(cd "$SRC_DIR" && zip -r -9 "$ZIP_PATH" . -x "*.DS_Store" "__MACOSX/*")
+
+echo "  Verifying archive integrity ..."
+unzip -t "$ZIP_PATH" >/dev/null
 
 SIZE_KB=$(python3 -c "import os; print(round(os.path.getsize('$ZIP_PATH') / 1024, 1))")
 
