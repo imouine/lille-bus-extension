@@ -1,192 +1,112 @@
-<!--
-  Lille Bus Extension
-  Author: imouine
-  Copyright (c) 2026
-  License: GPL-3.0
-  https://github.com/imouine/lille-bus-extension
--->
-
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Lille Bus — Preferences</title>
+    <title>Préférences — Bus Lille Ilévia</title>
     <link rel="stylesheet" href="options.css" />
   </head>
   <body>
-    <div class="page">
-      <aside class="sidebar">
-        <div class="sidebar-brand">
-          <img src="../assets/icons/icon48.png" alt="Lille Bus" class="sidebar-logo" />
-          <div>
-            <div class="sidebar-title">Lille Bus</div>
-            <div class="sidebar-version">v1.0.1</div>
-          </div>
+    <div class="pageShell">
+      <header class="appHeader">
+        <img src="../assets/icons/icon-v2-48.png" alt="" class="appLogo" />
+        <div class="appIdentity">
+          <p class="appName">Bus Lille Ilévia</p>
+          <p id="pageSubtitle" class="appSubtitle">Préférences de l’extension</p>
         </div>
-        <nav class="sidebar-nav">
-          <a href="#appearance" class="nav-item active" data-section="appearance">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-            <span id="nav_appearance">Appearance</span>
-          </a>
-          <a href="#refresh" class="nav-item" data-section="refresh">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-            <span id="nav_refresh">Refresh</span>
-          </a>
-          <a href="#about" class="nav-item" data-section="about">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-            <span id="nav_about">About</span>
-          </a>
-          <a href="#support" class="nav-item" data-section="support">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-            <span id="nav_support">Support</span>
-          </a>
-        </nav>
-      </aside>
+        <span id="extensionVersion" class="versionBadge" aria-label="Version 1.0.2">v1.0.2</span>
+      </header>
 
       <main>
-        <!-- Appearance -->
-        <section id="section-appearance" class="card visible">
-          <h2 class="card-title" id="label_appearance">Appearance</h2>
-          <p class="card-desc" id="desc_appearance">Customize the look and feel of the extension.</p>
+        <section class="settingsCard" aria-labelledby="settingsTitle">
+          <div class="sectionHeading">
+            <h1 id="settingsTitle">Préférences</h1>
+            <p id="settingsDesc">Adaptez l’interface à vos habitudes.</p>
+          </div>
 
-          <label class="setting-row">
-            <div class="setting-info">
-              <span class="setting-label" id="label_theme">Night mode</span>
-              <span class="setting-hint" id="hint_theme">Switch between light and dark themes</span>
-            </div>
+          <label class="settingRow" for="themeToggle">
+            <span class="settingCopy">
+              <span id="labelTheme" class="settingLabel">Mode sombre</span>
+              <span id="hintTheme" class="settingHint">Utiliser le thème sombre dans le popup et cette page</span>
+            </span>
             <input id="themeToggle" class="toggleInput" type="checkbox" />
             <span class="toggle" aria-hidden="true"></span>
           </label>
 
-          <label class="setting-row last">
-            <div class="setting-info">
-              <span class="setting-label" id="label_lang">English</span>
-              <span class="setting-hint" id="hint_lang">Change the interface language</span>
-            </div>
+          <label class="settingRow" for="langToggle">
+            <span class="settingCopy">
+              <span id="labelLang" class="settingLabel">Interface en anglais</span>
+              <span id="hintLang" class="settingHint">Afficher les textes de l’extension en anglais</span>
+            </span>
             <input id="langToggle" class="toggleInput" type="checkbox" />
             <span class="toggle" aria-hidden="true"></span>
           </label>
         </section>
 
-        <!-- Refresh -->
-        <section id="section-refresh" class="card">
-          <h2 class="card-title" id="label_refresh_section">Refresh</h2>
-          <p class="card-desc" id="desc_refresh">Control how often bus times are updated.</p>
+        <section class="settingsCard" aria-labelledby="refreshTitle">
+          <div class="sectionHeading">
+            <h2 id="refreshTitle">Données en direct</h2>
+            <p id="refreshDesc">Réglez la fréquence de mise à jour des prochains passages.</p>
+          </div>
 
-          <div class="setting-row">
-            <div class="setting-info full">
-              <div class="slider-header">
-                <span class="setting-label" id="label_refresh">Refresh interval</span>
-                <span class="slider-badge" id="refreshValue">60s</span>
+          <div class="settingRow sliderRow">
+            <div class="sliderControl">
+              <div class="sliderHeader">
+                <label id="labelRefresh" class="settingLabel" for="refreshSlider">Fréquence d’actualisation</label>
+                <output id="refreshValue" class="valueBadge" for="refreshSlider">30 s</output>
               </div>
-              <input id="refreshSlider" class="slider" type="range" min="0" max="4" step="1" value="4" />
-              <div class="slider-ticks" aria-hidden="true">
-                <span>5s</span><span>10s</span><span>15s</span><span>30s</span><span>60s</span>
+              <input id="refreshSlider" class="slider" type="range" min="0" max="3" step="1" value="0" />
+              <div class="sliderTicks" aria-hidden="true">
+                <span>30 s</span><span>1 min</span><span>2 min</span><span>5 min</span>
               </div>
             </div>
           </div>
 
-          <label class="setting-row last">
-            <div class="setting-info">
-              <span class="setting-label" id="label_glow">Glow effect</span>
-              <span class="setting-hint" id="hint_glow">Animate the badge to indicate live data</span>
-            </div>
-            <input id="glowToggle" class="toggleInput" type="checkbox" checked />
-            <span class="toggle" aria-hidden="true"></span>
-          </label>
         </section>
 
-        <!-- About -->
-        <section id="section-about" class="card">
-          <h2 class="card-title" id="label_about">About</h2>
-          <p class="card-desc" id="desc_about">An open-source extension for Lille Metropole public transport.</p>
-
-          <div class="about-grid">
-            <div class="about-card author-card">
-              <div class="author-avatar">
-                <img src="https://github.com/imouine.png" alt="imouine" class="avatar-img" />
-              </div>
-              <div class="author-info">
-                <span class="author-name">imouine</span>
-                <span class="author-role" id="author_role">Creator &amp; Maintainer</span>
-              </div>
-              <div class="author-links">
-                <a href="https://github.com/imouine" target="_blank" rel="noopener" class="social-link" title="GitHub">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12Z"/></svg>
-                </a>
-                <a href="https://imouine.com" target="_blank" rel="noopener" class="social-link" title="Website">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                </a>
-                <a href="https://x.com/_imouine" target="_blank" rel="noopener" class="social-link" title="X / Twitter">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                </a>
-              </div>
-            </div>
-
-            <div class="about-card meta-card">
-              <div class="meta-row">
-                <span class="meta-label" id="meta_version">Version</span>
-                <span class="meta-value">1.0.1</span>
-              </div>
-              <div class="meta-row">
-                <span class="meta-label" id="meta_license">License</span>
-                <span class="meta-value">GPL-3.0</span>
-              </div>
-              <div class="meta-row">
-                <span class="meta-label" id="meta_source">Source</span>
-                <a href="https://github.com/imouine/lille-bus-extension" target="_blank" rel="noopener" class="meta-link">GitHub →</a>
-              </div>
-              <div class="meta-row">
-                <span class="meta-label" id="meta_data">Data</span>
-                <a href="https://data.lillemetropole.fr" target="_blank" rel="noopener" class="meta-link">Ilévia Open Data →</a>
-              </div>
-              <div class="meta-row last">
-                <span class="meta-label" id="meta_gtfs">GTFS</span>
-                <a href="https://media.ilevia.fr/opendata/gtfs.zip" target="_blank" rel="noopener" class="meta-link">Ilévia GTFS →</a>
-              </div>
-            </div>
+        <section class="legendCard" aria-labelledby="colorLegendTitle">
+          <div class="sectionHeading">
+            <h2 id="colorLegendTitle">Code couleur</h2>
+            <p id="colorLegendDesc">Couleur du badge et du prochain passage affiché.</p>
           </div>
+          <ul class="colorLegend">
+            <li>
+              <span class="colorSwatch normal" aria-hidden="true"></span>
+              <span><strong id="colorBlueLabel">Bleu</strong><small id="colorBlueDesc">Plus de 5 minutes · temps réel</small></span>
+            </li>
+            <li>
+              <span class="colorSwatch soon" aria-hidden="true"></span>
+              <span><strong id="colorOrangeLabel">Orange</strong><small id="colorOrangeDesc">Entre 2 et 5 minutes · temps réel</small></span>
+            </li>
+            <li>
+              <span class="colorSwatch now" aria-hidden="true"></span>
+              <span><strong id="colorRedLabel">Rouge</strong><small id="colorRedDesc">Dans 1 minute ou à l’approche</small></span>
+            </li>
+            <li>
+              <span class="colorSwatch theoretical" aria-hidden="true"></span>
+              <span><strong id="colorGrayLabel">Gris</strong><small id="colorGrayDesc">Horaire théorique, sans temps réel</small></span>
+            </li>
+          </ul>
         </section>
 
-        <!-- Support -->
-        <section id="section-support" class="card">
-          <h2 class="card-title" id="label_support">Support</h2>
-          <p class="card-desc" id="desc_support">This project is free and built in my spare time. Your support helps me improve it and add new features.</p>
-
-          <div class="support-container">
-            <div class="kofi-card">
-              <div class="kofi-icon">
-                <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <!-- Mug body -->
-                  <rect x="4" y="10" width="22" height="18" rx="3" fill="currentColor" opacity="0.15"/>
-                  <rect x="4" y="10" width="22" height="18" rx="3" stroke="currentColor" stroke-width="1.8"/>
-                  <!-- Handle -->
-                  <path d="M26 15h3a4 4 0 0 1 0 8h-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                  <!-- Steam lines -->
-                  <path d="M11 6 Q12 4 11 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
-                  <path d="M15 6 Q16 4 15 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
-                  <path d="M19 6 Q20 4 19 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
-                  <!-- Heart inside cup -->
-                  <path d="M15 17.5c0-1.1.9-2 2-2s2 .9 2 2c0-1.1.9-2 2-2s2 .9 2 2c0 2.5-4 5-4 5s-4-2.5-4-5z" fill="currentColor" opacity="0.85"/>
-                </svg>
-              </div>
-              <div class="kofi-info">
-                <span class="kofi-title" id="kofi_title">Support the project</span>
-                <span class="kofi-desc" id="kofi_desc">Help me keep improving and maintaining this tool.</span>
-              </div>
-              <a href="https://ko-fi.com/imouine" target="_blank" rel="noopener" class="kofi-btn">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M23.881 8.948c-.773-4.085-4.859-4.593-4.859-4.593H.723c-.604 0-.679.798-.679.798s-.082 7.324-.022 11.822c.164 2.424 2.586 2.672 2.586 2.672s8.267-.023 11.966-.049c2.438-.426 2.683-2.566 2.658-3.734 4.352.24 7.422-2.831 6.649-6.916zm-11.062 3.511c-1.246 1.453-4.011 3.976-4.011 3.976s-.121.119-.31.023c-.076-.057-.108-.09-.108-.09-.443-.441-3.368-3.049-4.034-3.954-.709-.965-1.041-2.7-.091-3.71.951-1.01 3.005-1.086 4.363.407 0 0 1.565-1.782 3.468-.963 1.904.82 1.832 3.011.723 4.311zm6.173.478c-.928.116-1.682.028-1.682.028V7.284h1.77s1.971.551 1.971 2.638c0 1.913-.985 2.667-2.059 3.015z"/></svg>
-                <span id="kofi_btn_text">Support the project</span>
-              </a>
-            </div>
+        <section class="aboutCard" aria-labelledby="aboutTitle">
+          <div>
+            <h2 id="aboutTitle">À propos</h2>
+            <p id="aboutDesc">Extension open source pour consulter les prochains bus de la métropole lilloise.</p>
           </div>
+          <nav class="usefulLinks" aria-label="Liens utiles">
+            <a id="sourceLink" href="https://github.com/imouine/lille-bus-extension" target="_blank" rel="noopener">Code source</a>
+            <a id="issueLink" href="https://github.com/imouine/lille-bus-extension/issues" target="_blank" rel="noopener">Signaler un problème</a>
+            <a id="privacyLink" href="https://github.com/imouine/lille-bus-extension/blob/main/PRIVACY_POLICY.md" target="_blank" rel="noopener">Confidentialité</a>
+          </nav>
         </section>
 
-        <div class="toast" id="savedMsg"></div>
+        <button id="resetBtn" class="resetButton" type="button">Rétablir les réglages par défaut</button>
+        <p id="dataNote" class="dataNote">Extension indépendante, non affiliée à Ilévia ou à la MEL. Données ouvertes MEL et Ilévia.</p>
       </main>
     </div>
 
-    <script src="options.js"></script>
+    <div id="savedMsg" class="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="options.js"></script>
   </body>
 </html>

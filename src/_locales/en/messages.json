@@ -1,0 +1,11 @@
+{
+  "extensionName": {
+    "message": "Bus Lille Ilévia — Live times"
+  },
+  "extensionDescription": {
+    "message": "Check upcoming Ilévia buses using live and scheduled times. Chrome badge, multiple watched trips and dark mode."
+  },
+  "extensionActionTitle": {
+    "message": "Bus Lille Ilévia — upcoming departures"
+  }
+}

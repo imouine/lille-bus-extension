@@ -1,4 +1,4 @@
-# Lille Bus Extension - Chrome Web Store Packaging Script
+# Bus Lille Ilévia - Chrome Web Store Packaging Script
 # Creates a clean .zip of the src/ folder ready for CWS upload.
 # Usage:  .\scripts\package.ps1
 # Output: dist\lille-bus-extension-v{version}.zip
@@ -12,8 +12,10 @@ $distDir = Join-Path $root "dist"
 $manifest = Get-Content (Join-Path $srcDir "manifest.json") -Raw | ConvertFrom-Json
 $version  = $manifest.version
 
+python (Join-Path $root "scripts/validate_release.py")
+
 Write-Host ""
-Write-Host "  Lille Bus Extension - Packaging" -ForegroundColor Cyan
+Write-Host "  Bus Lille Ilévia - Packaging" -ForegroundColor Cyan
 Write-Host "  Version: $version" -ForegroundColor Gray
 Write-Host ""
 
@@ -30,6 +32,23 @@ if (Test-Path $zipPath) {
 
 Write-Host "  Zipping src/ ..." -ForegroundColor Yellow
 Compress-Archive -Path (Join-Path $srcDir "*") -DestinationPath $zipPath -CompressionLevel Optimal
+
+Write-Host "  Verifying archive integrity ..." -ForegroundColor Yellow
+$verifyDir = Join-Path $distDir ".verify-$version"
+if (Test-Path $verifyDir) {
+    Remove-Item $verifyDir -Recurse -Force
+}
+try {
+    Expand-Archive -Path $zipPath -DestinationPath $verifyDir
+    if (-not (Test-Path (Join-Path $verifyDir "manifest.json"))) {
+        throw "Packaged archive does not contain manifest.json"
+    }
+}
+finally {
+    if (Test-Path $verifyDir) {
+        Remove-Item $verifyDir -Recurse -Force
+    }
+}
 
 $sizeKB = [math]::Round((Get-Item $zipPath).Length / 1KB, 1)
 

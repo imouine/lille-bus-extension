@@ -1,12 +1,12 @@
 <div align="center">
-  <img src="src/assets/icons/lille-bus-extension-logo.png" alt="Lille Bus Extension" width="128" />
+  <img src="design/icon-v2-master.png" alt="Bus Lille Ilévia" width="128" />
 
-  <h1>Lille Bus — Compte à rebours en direct</h1>
+  <h1>Bus Lille Ilévia — Compte à rebours en direct</h1>
 
   <p>Une extension Chrome qui affiche les minutes avant le prochain bus — directement sur l'icône de la barre d'outils, en temps réel.</p>
 
   [![Chrome Web Store](https://img.shields.io/badge/Chrome-Web%20Store-4285F4?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/kjacdkifcibhcolpbooimeidhhjdlfnk)
-  ![Version](https://img.shields.io/badge/version-1.0.1-brightgreen)
+  ![Version](https://img.shields.io/badge/version-1.0.2-brightgreen)
   ![Manifest V3](https://img.shields.io/badge/Manifest-V3-4285F4?logo=googlechrome&logoColor=white)
   ![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue)
   ![MEL Open Data](https://img.shields.io/badge/Data-MEL%20Open%20Data-00a651)
@@ -21,16 +21,17 @@
 
 ### 🔴 Badge en direct
 - Affiche le **temps restant en minutes** avant le prochain bus sur l'icône Chrome
-- Rafraîchissement automatique à intervalle configurable (5s · 10s · 15s · 30s · 60s)
+- Rafraîchissement des données configurable (30 s · 1 min · 2 min · 5 min), avec recalcul du badge toutes les 30 secondes
 - **Couleur selon l'urgence** — bleu (> 5 min) → orange (2–5 min) → rouge (≤ 1 min)
-- **Effet de halo pulsant** sur le badge quand les données sont en direct — l'intensité augmente à l'approche du bus
 - Bascule automatique sur les horaires statiques (badge gris) en cas d'indisponibilité de l'API
+- État explicite des données : direct, théorique, indisponible ou périmé
 
 ### 👁️ Multi-surveillance
 - **Surveiller plusieurs combinaisons arrêt / ligne / direction** simultanément
 - Le badge affiche toujours le **meilleur temps (minimum)** parmi tous les suivis
-- Chaque suivi affiche son propre compte à rebours avec une pastille colorée, un indicateur d'urgence, et un point (●) ou un tilde (~) pour distinguer temps réel et horaire théorique
-- Ajouter des suivis avec **+ Ajouter**, valider et fermer avec **Valider**, ou supprimer individuellement avec ×
+- Chaque suivi affiche jusqu'aux **trois prochains passages** avec leur source
+- Tableau de bord prioritaire : les trajets enregistrés apparaissent avant le formulaire d'ajout
+- Ajouter un trajet via **Ajouter un trajet**, puis le supprimer individuellement avec ×
 - Bouton **Tout supprimer** pour réinitialiser la liste en un clic
 
 ### ⏸ Pause / Reprise
@@ -43,14 +44,15 @@
 |---|---|
 | Mode nuit | Bascule entre le thème clair et sombre (suit le système par défaut) |
 | Langue | Bascule entre Français et English |
-| Fréquence d'actualisation | 5s · 10s · 15s · 30s · 60s (curseur) |
-| Effet de glow | Active / désactive l'animation de pulsation du badge sur les données en direct |
-| Soutenir | Intégration Ko-fi — soutenez le projet directement depuis la page d'options |
+| Fréquence d'actualisation | 30 s · 1 min · 2 min · 5 min |
+| Réinitialisation | Rétablit les préférences par défaut en un clic |
 
 ### 🎨 Interface
 - **Sélection rétractable** — sélectionner un arrêt, une ligne ou une direction masque les autres choix ; cliquer à nouveau pour désélectionner et modifier
 - **Couleurs officielles des lignes** — lignes affichées en pastilles colorées selon le schéma Ilévia
+- **Code couleur expliqué** dans les préférences pour distinguer urgence, temps réel et horaires théoriques
 - Interface entièrement localisée **FR / EN**
+- Recherche d’arrêt utilisable entièrement au clavier, libellés accessibles et respect de la réduction des animations
 
 ---
 
@@ -58,9 +60,9 @@
 
 ### Depuis le Chrome Web Store *(recommandé)*
 
-[![Installer depuis le Chrome Web Store](https://img.shields.io/badge/Installer%20sur-Chrome-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/jllciocpnnbaakdcommdoammhifoncme)
+[![Installer depuis le Chrome Web Store](https://img.shields.io/badge/Installer%20sur-Chrome-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/kjacdkifcibhcolpbooimeidhhjdlfnk)
 
-1. Rendez-vous sur la [page du Chrome Web Store](https://chromewebstore.google.com/detail/jllciocpnnbaakdcommdoammhifoncme)
+1. Rendez-vous sur la [page du Chrome Web Store](https://chromewebstore.google.com/detail/kjacdkifcibhcolpbooimeidhhjdlfnk)
 2. Cliquez sur **Ajouter à Chrome**
 3. Cliquez sur l'icône de l'extension dans la barre d'outils pour démarrer
 
@@ -83,13 +85,13 @@
 1. Cliquer sur l'icône de l'extension
 2. Taper le nom de votre arrêt — le sélectionner dans les suggestions
 3. Choisir une ligne, puis une direction
-4. Cliquer sur **+ Ajouter** pour ajouter un suivi supplémentaire (ou **Valider** pour enregistrer et fermer)
+4. Cliquer sur **Ajouter ce trajet**
 
 Le badge se met à jour immédiatement.
 
 ### Gérer les suivis
 - **Cliquer sur un élément sélectionné** (arrêt / ligne / direction) pour le désélectionner et en choisir un autre
-- **+ Ajouter** enregistre la sélection courante et réinitialise le formulaire pour en ajouter un autre
+- **Ajouter un trajet** ouvre le formulaire sans masquer les trajets déjà surveillés
 - **×** sur une carte de suivi la supprime individuellement
 - **Tout supprimer** supprime tous les suivis d'un coup
 
@@ -103,8 +105,9 @@ Cliquer sur **‖** (à côté de ⚙️) pour mettre en pause tous les rafraîc
 ```
 src/
 ├── manifest.json
+├── lib/                       # Client MEL, configuration et logique transport partagés
 ├── background/
-│   └── service-worker.js     # Badge, alarme, API en direct, animation de pause
+│   └── service-worker.js     # Coordination des données, alarmes et badge
 ├── popup/
 │   ├── popup.html
 │   ├── popup.css
@@ -112,9 +115,10 @@ src/
 ├── options/
 │   ├── options.html
 │   ├── options.css
-│   └── options.js            # Thème, langue, intervalle de rafraîchissement, halo
+│   └── options.js            # Thème, langue et fréquence de rafraîchissement
 ├── data/
-│   └── schedules.json        # Horaires statiques + identifiants GTFS (généré)
+│   └── schedules.json        # Calendriers exacts + stations/horaires GTFS (généré)
+├── _locales/                 # Nom et description du manifeste en français et en anglais
 └── assets/
     └── icons/
 
@@ -135,11 +139,11 @@ Toutes les données proviennent de la **plateforme open data de la Métropole Eu
 
 | Source | URL | Utilisation |
 |---|---|---|
-| `ilevia:prochains_passages` | [MEL Open Data](https://data.lillemetropole.fr) | Prochains passages en temps réel (compte à rebours) |
-| `ilevia:couleurs_lignes` | [MEL Open Data](https://data.lillemetropole.fr) | Couleurs officielles des lignes (cache 30 jours) |
+| `dsp_ilevia:prochains_passages` (WFS) | [MEL Open Data](https://data.lillemetropole.fr) | Prochains passages en temps réel (compte à rebours) |
+| `dsp_ilevia:couleurs_lignes` (WFS) | [MEL Open Data](https://data.lillemetropole.fr) | Couleurs officielles des lignes (cache 30 jours) |
 | Flux GTFS | [Ilévia GTFS](https://media.ilevia.fr/opendata/gtfs.zip) | Horaires statiques, identifiants d'arrêts, routes et destinations |
 
-Les horaires de secours statiques sont construits depuis le **flux GTFS Ilévia** via `scripts/build_schedules.py`. Les données GTFS fournissent des identifiants d'arrêt (`stop_id`) permettant une correspondance fiable avec l'`identifiant_station` de l'API en direct.
+Les horaires de secours sont construits depuis le **flux GTFS Ilévia** via `scripts/build_schedules.py`. Le fichier conserve chaque date réelle de circulation et les stations parentes GTFS : les jours fériés/vacances ne réutilisent donc pas arbitrairement un horaire de semaine, et deux arrêts homonymes ne sont plus fusionnés.
 
 ### Stratégie de correspondance
 Les passages en direct sont mis en correspondance via le **`stop_id` GTFS** (stocké comme `_stopIds` dans `schedules.json`), converti au format `identifiant_station` de l'API (`ILEVIA:StopPoint:BP:{id}:LOC`). Cela garantit une correspondance précise indépendamment des différences textuelles entre le `sens_ligne` de l'API et le headsign GTFS (ex. `"JEAN PAUL SARTRE"` vs `"JP SARTRE"`). Un fallback textuel approximatif est utilisé pour les anciens suivis antérieurs à l'enrichissement GTFS.
@@ -154,7 +158,7 @@ Les passages en direct sont mis en correspondance via le **`stop_id` GTFS** (sto
 | `alarms` | Planifier le rafraîchissement périodique du badge |
 | `https://data.lillemetropole.fr/*` | Récupérer les passages en direct et les couleurs de lignes depuis la MEL open data |
 
-**Aucune donnée personnelle n'est collectée ou transmise.** Tout est stocké uniquement dans `chrome.storage.local`, sur votre propre machine.
+**Aucune donnée personnelle n'est collectée par le développeur.** La liste de trajets et les préférences restent dans `chrome.storage.local`. Pour obtenir les passages, seuls les identifiants publics des arrêts surveillés sont envoyés à l'API MEL. Voir la [politique de confidentialité](PRIVACY_POLICY.md).
 
 ---
 
@@ -164,13 +168,22 @@ Les passages en direct sont mis en correspondance via le **`stop_id` GTFS** (sto
 python scripts/build_schedules.py
 ```
 
-Télécharge le dernier flux GTFS Ilévia et régénère `src/data/schedules.json` avec les horaires et identifiants GTFS pour toutes les lignes de bus régulières.
+Télécharge le dernier flux GTFS Ilévia et régénère `src/data/schedules.json` avec les horaires et identifiants GTFS pour toutes les lignes de bus, y compris les services de nuit.
 
 Pour vérifier la correspondance identifiant GTFS ↔ identifiant API pour un arrêt précis :
 
 ```bash
 python scripts/explore_stop_ids.py
 ```
+
+## ✅ Vérifications avant publication
+
+```bash
+npm run check
+./scripts/package.sh
+```
+
+La validation refuse notamment un package dont les horaires GTFS ne couvrent plus la date courante.
 
 ---
 
@@ -213,4 +226,4 @@ Ce projet n'est pas affilié à Ilévia, la MEL ou tout autre opérateur de tran
 
 ## 🔐 Confidentialité
 
-[Politique de confidentialité](PRIVACY_POLICY.md) — Aucune collecte de données, aucun tracking, aucun cookie. Tout reste sur votre machine.
+[Politique de confidentialité](PRIVACY_POLICY.md) — Aucune collecte par le développeur, aucun tracking et aucun cookie ; seuls les identifiants publics des arrêts interrogés sont envoyés à l’API MEL.

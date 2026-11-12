@@ -1,0 +1,11 @@
+{
+  "extensionName": {
+    "message": "Bus Lille Ilévia — Horaires temps réel"
+  },
+  "extensionDescription": {
+    "message": "Consultez les prochains bus Ilévia en direct et selon les horaires théoriques. Badge Chrome, suivi multi-trajets et mode sombre."
+  },
+  "extensionActionTitle": {
+    "message": "Bus Lille Ilévia — prochains passages"
+  }
+}

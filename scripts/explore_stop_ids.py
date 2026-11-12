@@ -4,10 +4,18 @@ to compare GTFS stop_ids against API identifiant_station values.
 
 Usage: python scripts/explore_stop_ids.py
 """
-import urllib.request, zipfile, io, csv, json
+import urllib.request, urllib.parse, zipfile, io, csv, json
 
 GTFS_URL = "https://media.ilevia.fr/opendata/gtfs.zip"
-API_URL  = "https://data.lillemetropole.fr/data/ogcapi/collections/ilevia%3Aprochains_passages/items?f=json&limit=200"
+API_URL  = (
+    "https://data.lillemetropole.fr/geoserver/dsp_ilevia/ows"
+    "?service=WFS&version=2.0.0&request=GetFeature"
+    "&typeNames=dsp_ilevia%3Aprochains_passages"
+    "&outputFormat=application%2Fjson&count=200"
+)
+
+def with_filter(expression):
+    return f"{API_URL}&CQL_FILTER={urllib.parse.quote(expression)}"
 
 def fetch_json(url):
     req = urllib.request.Request(url, headers={"User-Agent": "explore/1.0"})
@@ -36,7 +44,7 @@ def main():
 
     # 2) Query live API for POINT CENTRAL
     print("\n--- Live API for POINT CENTRAL ---")
-    filter_url = f"{API_URL}&filter=nom_station+LIKE+'%25POINT+CENTRAL'"
+    filter_url = with_filter("nom_station LIKE '%POINT CENTRAL'")
     data = fetch_json(filter_url)
     recs = data.get("records", data.get("features", []))
     print(f"API record count: {len(recs)}")
@@ -54,7 +62,7 @@ def main():
 
     # 3) Also check PORTE DES POSTES for verification
     print("\n--- Live API for PORTE DES POSTES ---")
-    filter_url2 = f"{API_URL}&filter=nom_station+LIKE+'%25PORTE+DES+POSTES'"
+    filter_url2 = with_filter("nom_station LIKE '%PORTE DES POSTES'")
     data2 = fetch_json(filter_url2)
     recs2 = data2.get("records", data2.get("features", []))
     seen2 = set()
