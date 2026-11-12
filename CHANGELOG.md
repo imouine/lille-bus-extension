@@ -7,7 +7,7 @@ and this project follows Semantic Versioning.
 
 ---
 
-## [Unreleased] — v1.0.2
+## [1.0.2] - 2026-11-13
 
 ### Fixed
 - **MEL API migration** — replaced the discontinued `/data/ogcapi` endpoints with the public GeoServer WFS service for live departures and official line colors
