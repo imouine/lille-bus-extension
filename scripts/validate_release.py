@@ -1,10 +1,11 @@
 """Validate release metadata and assets without external dependencies."""
 
-from datetime import date, datetime
+from datetime import datetime
 import json
 from pathlib import Path
 import struct
 import sys
+from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "src"
@@ -58,7 +59,8 @@ def main():
 
     schedules = json.loads((SRC / "data" / "schedules.json").read_text(encoding="utf-8"))
     meta = schedules.get("meta", {})
-    today = date.today().isoformat()
+    paris_today = datetime.now(ZoneInfo("Europe/Paris")).date()
+    today = paris_today.isoformat()
     if meta.get("format") != 2:
         errors += fail("schedules.json must use the exact-calendar v2 format")
     if not meta.get("calendar"):
@@ -70,7 +72,7 @@ def main():
         )
     try:
         generated = datetime.strptime(meta.get("generated", ""), "%Y-%m-%d").date()
-        age_days = (date.today() - generated).days
+        age_days = (paris_today - generated).days
         if age_days < 0 or age_days > 30:
             errors += fail(f"schedules.json was generated {age_days} day(s) ago")
     except ValueError:
