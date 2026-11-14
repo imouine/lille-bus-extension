@@ -7,6 +7,18 @@ and this project follows Semantic Versioning.
 
 ---
 
+## [1.0.3] - 2026-11-14
+
+### Fixed
+- **Flexible stop search** — queries now match the beginning of each word independently, ignoring accents, punctuation, letter case and word order; for example, `mairie hem` finds `Mairie — Hem`
+- **Obsolete theoretical departures** — when live data is available, theoretical departures earlier than the first confirmed live bus are no longer displayed
+
+### Changed
+- Refreshed the Chrome Web Store presentation assets with real extension captures and clearer feature-focused compositions
+- Added automated coverage for flexible stop matching and live/theoretical departure ordering
+
+---
+
 ## [1.0.2] - 2026-11-13
 
 ### Fixed

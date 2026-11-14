@@ -46,6 +46,19 @@ test("one live departure only replaces one nearby scheduled departure", () => {
   ]);
 });
 
+test("scheduled departures before the first live bus are discarded", () => {
+  const minute = 60 * 1000;
+  const merged = mergeDepartureTimestamps(
+    [8 * minute],
+    [1 * minute, 31 * minute],
+    { limit: 3, toleranceMs: 5 * minute }
+  );
+  assert.deepEqual(merged.map(({ departureAt, source }) => [departureAt, source]), [
+    [8 * minute, "live"],
+    [31 * minute, "theoretical"],
+  ]);
+});
+
 test("direction matching handles known MEL and GTFS differences", () => {
   assert.equal(directionMatches("FACHES CENTRE COMMERCIAL", "FACHES THUMESNIL CTRE COMMERCIAL"), true);
   assert.equal(directionMatches("GARE LILLE EUROPE", "LILLE LILLE EUROPE"), true);

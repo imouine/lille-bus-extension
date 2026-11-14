@@ -147,6 +147,7 @@ export function mergeDepartureTimestamps(
   const live = normalize(liveTimestamps);
   const theoretical = normalize(theoreticalTimestamps);
   const matchedTheoretical = new Set();
+  const firstLiveTimestamp = live[0] ?? null;
 
   for (const liveTimestamp of live) {
     let closestIndex = -1;
@@ -165,7 +166,10 @@ export function mergeDepartureTimestamps(
   return [
     ...live.map((departureAt) => ({ departureAt, source: "live", isLive: true })),
     ...theoretical
-      .filter((_, index) => !matchedTheoretical.has(index))
+      .filter((departureAt, index) => (
+        !matchedTheoretical.has(index)
+        && (firstLiveTimestamp === null || departureAt >= firstLiveTimestamp)
+      ))
       .map((departureAt) => ({ departureAt, source: "theoretical", isLive: false })),
   ]
     .sort((a, b) => a.departureAt - b.departureAt || (a.isLive ? -1 : 1))

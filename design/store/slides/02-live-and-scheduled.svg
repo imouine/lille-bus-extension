@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800" viewBox="0 0 1280 800">
+  <defs><filter id="shadow" x="-35%" y="-35%" width="170%" height="170%"><feDropShadow dx="0" dy="24" stdDeviation="24" flood-color="#000" flood-opacity=".42"/></filter></defs>
+  <image href="../assets/transit-background-v1.png" width="1280" height="800" preserveAspectRatio="xMidYMid slice"/><rect width="1280" height="800" fill="#07131F" fill-opacity=".18"/>
+  <g font-family="Arial, sans-serif">
+    <rect x="70" y="108" width="174" height="38" rx="19" fill="#45C695" fill-opacity=".14" stroke="#45C695" stroke-opacity=".42"/><text x="94" y="133" fill="#CFF7E8" font-size="14" font-weight="700">DIRECT PRIORITAIRE</text>
+    <text x="70" y="230" fill="#EEF8FF" font-size="58" font-weight="700" letter-spacing="-1.5">Le direct passe</text><text x="70" y="295" fill="#EEF8FF" font-size="58" font-weight="700" letter-spacing="-1.5">toujours en premier.</text>
+    <text x="70" y="362" fill="#B4C8D7" font-size="23">Dès qu’un bus est confirmé en temps réel,</text><text x="70" y="395" fill="#B4C8D7" font-size="23">les horaires théoriques dépassés disparaissent.</text>
+    <g transform="translate(70 470)"><rect width="440" height="92" rx="20" fill="#0E2132" stroke="#2C5873"/><circle cx="42" cy="46" r="22" fill="#45C695" fill-opacity=".18"/><path d="M32 46l7 7 14-16" fill="none" stroke="#45C695" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><text x="82" y="40" fill="#EEF8FF" font-size="17" font-weight="700">Pas de faux départ imminent</text><text x="82" y="64" fill="#8FB7D2" font-size="13">Seuls les passages encore crédibles sont conservés.</text></g>
+
+    <g filter="url(#shadow)"><rect x="608" y="104" width="600" height="505" rx="32" fill="#0B1A28" stroke="#38A9F5" stroke-opacity=".42" stroke-width="2"/><image href="../assets/actual-passage-cards.png" x="633" y="132" width="550" height="448"/></g>
+    <path d="M842 492C815 548 760 576 690 594" fill="none" stroke="#38A9F5" stroke-width="2" stroke-dasharray="6 7"/>
+    <g transform="translate(652 584)"><rect width="270" height="70" rx="18" fill="#0E2132" stroke="#38A9F5"/><circle cx="30" cy="35" r="9" fill="#38A9F5"/><text x="52" y="31" fill="#EEF8FF" font-size="15" font-weight="700">21 min · passage direct</text><text x="52" y="52" fill="#8FB7D2" font-size="12">Le théorique précédent est masqué</text></g>
+    <g transform="translate(942 584)"><rect width="230" height="70" rx="18" fill="#0E2132" stroke="#64748B"/><circle cx="30" cy="35" r="9" fill="#8497AC"/><text x="52" y="31" fill="#EEF8FF" font-size="15" font-weight="700">50 et 80 min</text><text x="52" y="52" fill="#8FB7D2" font-size="12">Horaires prévus utiles</text></g>
+  </g>
+</svg>

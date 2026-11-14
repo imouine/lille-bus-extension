@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800" viewBox="0 0 1280 800">
+  <defs>
+    <linearGradient id="shade" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#07131F" stop-opacity=".05"/><stop offset=".58" stop-color="#07131F" stop-opacity=".35"/></linearGradient>
+    <filter id="shadow" x="-35%" y="-35%" width="170%" height="170%"><feDropShadow dx="0" dy="24" stdDeviation="24" flood-color="#000" flood-opacity=".45"/></filter>
+  </defs>
+  <image href="../assets/transit-background-v1.png" width="1280" height="800" preserveAspectRatio="xMidYMid slice"/><rect width="1280" height="800" fill="url(#shade)"/>
+  <g font-family="Arial, sans-serif">
+    <image href="../../icon-v2-master.png" x="70" y="62" width="58" height="58"/><text x="146" y="88" fill="#EEF8FF" font-size="23" font-weight="700">Bus Lille Ilévia</text><text x="146" y="115" fill="#8FB7D2" font-size="15">Les prochains passages, directement dans Chrome</text>
+    <rect x="70" y="180" width="140" height="38" rx="19" fill="#38A9F5" fill-opacity=".16" stroke="#38A9F5" stroke-opacity=".55"/><circle cx="94" cy="199" r="5" fill="#45C695"/><text x="111" y="205" fill="#D8EFFF" font-size="14" font-weight="700">TEMPS RÉEL</text>
+    <text x="70" y="300" fill="#EEF8FF" font-size="61" font-weight="700" letter-spacing="-2">Vos prochains bus,</text><text x="70" y="368" fill="#EEF8FF" font-size="61" font-weight="700" letter-spacing="-2">en un coup d’œil.</text>
+    <text x="70" y="432" fill="#B4C8D7" font-size="23">Direct et horaires prévus réunis dans</text><text x="70" y="465" fill="#B4C8D7" font-size="23">une interface claire, sans ouvrir un site.</text>
+    <g transform="translate(70 532)"><rect width="176" height="48" rx="24" fill="#EEF8FF" fill-opacity=".1"/><text x="23" y="31" fill="#D8EFFF" font-size="16" font-weight="700">12 trajets suivis</text><rect x="192" width="157" height="48" rx="24" fill="#EEF8FF" fill-opacity=".1"/><text x="216" y="31" fill="#D8EFFF" font-size="16" font-weight="700">Badge Chrome</text></g>
+    <text x="70" y="714" fill="#7892A7" font-size="14">Extension indépendante · Données ouvertes MEL et Ilévia</text>
+
+    <g filter="url(#shadow)">
+      <rect x="680" y="70" width="530" height="650" rx="28" fill="#EAF1F6"/>
+      <path d="M680 98a28 28 0 0 1 28-28h474a28 28 0 0 1 28 28v82H680z" fill="#F7FAFC"/>
+      <circle cx="718" cy="110" r="7" fill="#CBD5E1"/><circle cx="742" cy="110" r="7" fill="#CBD5E1"/><circle cx="766" cy="110" r="7" fill="#CBD5E1"/>
+      <rect x="704" y="134" width="360" height="36" rx="18" fill="#FFFFFF"/><text x="729" y="158" fill="#64748B" font-size="13">Votre navigation</text>
+      <rect x="1118" y="122" width="58" height="58" rx="16" fill="#FFFFFF"/><image href="../../icon-v2-master.png" x="1129" y="133" width="36" height="36"/>
+      <rect x="1153" y="116" width="42" height="27" rx="10" fill="#1D7FD1" stroke="#fff" stroke-width="2"/><text x="1174" y="135" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">21</text>
+      <rect x="716" y="208" width="250" height="18" rx="9" fill="#DCE7EE"/><rect x="716" y="244" width="210" height="13" rx="6" fill="#DCE7EE"/><rect x="716" y="274" width="260" height="13" rx="6" fill="#DCE7EE"/>
+      <g transform="translate(802 168) rotate(1 190 235)"><rect x="-10" y="-10" width="401" height="491" rx="20" fill="#07131F" stroke="#38A9F5" stroke-opacity=".45"/><image href="../assets/actual-popup-clean.png" width="381" height="471"/></g>
+    </g>
+  </g>
+</svg>

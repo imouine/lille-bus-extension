@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800" viewBox="0 0 1280 800">
+  <defs><filter id="shadow" x="-35%" y="-35%" width="170%" height="170%"><feDropShadow dx="0" dy="24" stdDeviation="24" flood-color="#000" flood-opacity=".42"/></filter></defs>
+  <image href="../assets/transit-background-v1.png" width="1280" height="800" preserveAspectRatio="xMidYMid slice"/><rect width="1280" height="800" fill="#07131F" fill-opacity=".16"/>
+  <g font-family="Arial, sans-serif">
+    <rect x="72" y="76" width="164" height="38" rx="19" fill="#38A9F5" fill-opacity=".15" stroke="#38A9F5" stroke-opacity=".5"/><text x="96" y="101" fill="#D8EFFF" font-size="14" font-weight="700">RÉGLAGES UTILES</text>
+    <text x="72" y="194" fill="#EEF8FF" font-size="56" font-weight="700" letter-spacing="-1.5">À votre façon.</text><text x="72" y="242" fill="#B4C8D7" font-size="22">Seulement les options qui comptent,</text><text x="72" y="274" fill="#B4C8D7" font-size="22">présentées sans jargon.</text>
+    <g transform="translate(72 332)"><circle cx="13" cy="13" r="13" fill="#45C695" fill-opacity=".2"/><path d="M7 13l4 4 8-9" fill="none" stroke="#45C695" stroke-width="2.5"/><text x="39" y="18" fill="#D8EFFF" font-size="16" font-weight="700">Thème sombre</text><circle cx="13" cy="61" r="13" fill="#45C695" fill-opacity=".2"/><path d="M7 61l4 4 8-9" fill="none" stroke="#45C695" stroke-width="2.5"/><text x="39" y="66" fill="#D8EFFF" font-size="16" font-weight="700">Français ou anglais</text><circle cx="13" cy="109" r="13" fill="#45C695" fill-opacity=".2"/><path d="M7 109l4 4 8-9" fill="none" stroke="#45C695" stroke-width="2.5"/><text x="39" y="114" fill="#D8EFFF" font-size="16" font-weight="700">Actualisation maîtrisée</text></g>
+    <text x="72" y="654" fill="#7892A7" font-size="14">Sans compte · Sans publicité · Open source</text>
+
+    <g filter="url(#shadow)" transform="translate(510 92) rotate(-1 350 105)"><rect x="-14" y="-14" width="768" height="248" rx="28" fill="#081724" stroke="#38A9F5" stroke-opacity=".4"/><image href="../assets/actual-options-switches.png" width="740" height="220"/></g>
+    <g filter="url(#shadow)" transform="translate(410 398) rotate(1 370 135)"><rect x="-14" y="-14" width="768" height="298" rx="28" fill="#081724" stroke="#38A9F5" stroke-opacity=".4"/><image href="../assets/actual-options-colors.png" width="740" height="270"/></g>
+    <g transform="translate(1030 690)"><rect width="160" height="44" rx="22" fill="#EEF8FF" fill-opacity=".1"/><text x="80" y="28" text-anchor="middle" fill="#D8EFFF" font-size="14" font-weight="700">Captures réelles</text></g>
+  </g>
+</svg>

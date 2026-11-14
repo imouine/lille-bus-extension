@@ -7,7 +7,8 @@ import {
   resolveWatcherStation,
 } from "../lib/config.js";
 import { fetchLineColors } from "../lib/mel-api.js";
-import { departureUrgencyClass, minutesUntil, noAccents } from "../lib/transit.js";
+import { normalizeStopSearch, stopSearchRank } from "../lib/search.js";
+import { departureUrgencyClass, minutesUntil } from "../lib/transit.js";
 
 const I18N = {
   fr: {
@@ -147,7 +148,7 @@ async function prepareSchedules() {
         id,
         name: station.name,
         label: station.label || station.name,
-        search: normalizeSearch(`${station.label || station.name} ${station.city || ""}`),
+        search: normalizeStopSearch(`${station.label || station.name} ${station.city || ""}`),
       }))
       .sort((left, right) => left.label.localeCompare(right.label, "fr", { numeric: true }));
     const resolved = watchers.map((watcher) => resolveWatcherStation(data, watcher));
@@ -424,21 +425,18 @@ function restartRefreshTimer() {
   refreshTimer = setInterval(() => refresh(), refreshPeriodMinutes(prefs) * 60000);
 }
 
-function normalizeSearch(value) {
-  return noAccents(value).toLowerCase();
-}
-
 function searchStops(query) {
-  const normalized = normalizeSearch(query.trim());
+  const normalized = normalizeStopSearch(query);
   if (normalized.length < 2) return [];
-  const prefix = [];
-  const contains = [];
-  for (const stop of allStops) {
-    if (!stop.search.includes(normalized)) continue;
-    (stop.search.startsWith(normalized) ? prefix : contains).push(stop);
-    if (prefix.length + contains.length >= 50) break;
-  }
-  return prefix.concat(contains).slice(0, 12);
+  return allStops
+    .map((stop) => ({ stop, rank: stopSearchRank(stop.search, normalized) }))
+    .filter(({ rank }) => rank !== null)
+    .sort((left, right) => (
+      left.rank - right.rank
+      || left.stop.label.localeCompare(right.stop.label, "fr", { numeric: true })
+    ))
+    .slice(0, 12)
+    .map(({ stop }) => stop);
 }
 
 function choiceButton(label, selected, onClick, { className = "", id = "", option = false } = {}) {

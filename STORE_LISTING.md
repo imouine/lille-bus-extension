@@ -1,4 +1,4 @@
-# Chrome Web Store listing — v1.0.2
+# Chrome Web Store listing — v1.0.3
 
 ## Audit de la fiche publique — 13 novembre 2026
 
@@ -11,7 +11,7 @@ La fiche actuellement publiée présente encore la version `1.0.1` :
 - langue déclarée : français uniquement ;
 - dernière mise à jour affichée : 14 avril 2026.
 
-Pour la `1.0.2`, conserver l’icône `icon-v2` déjà intégrée au manifeste. Elle est plus simple, sans petit texte illisible et reste reconnaissable à 16 px. La priorité visuelle est donc de remplacer les captures Store, pas de redessiner une troisième icône.
+Pour la `1.0.3`, conserver l’icône `icon-v2` déjà intégrée au manifeste. Elle est plus simple, sans petit texte illisible et reste reconnaissable à 16 px. La priorité visuelle est donc de remplacer les captures Store, pas de redessiner une troisième icône.
 
 ## Short description
 
@@ -60,4 +60,4 @@ Extension indépendante et open source, non affiliée, approuvée ou sponsorisé
 2. Exécuter `./scripts/package.sh` et charger le ZIP produit comme extension non empaquetée de test.
 3. Vérifier le popup en français et en anglais, clair et sombre, puis pause/reprise.
 4. Vérifier la fiche, la déclaration de pratiques de confidentialité et les captures.
-5. Envoyer une seule fois la version `1.0.2` validée.
+5. Envoyer une seule fois la version `1.0.3` validée.

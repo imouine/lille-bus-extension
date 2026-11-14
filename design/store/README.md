@@ -1,8 +1,8 @@
-# Direction visuelle Chrome Web Store — v1.0.2
+# Direction visuelle Chrome Web Store — v1.0.3
 
 ## Objectif
 
-Présenter l’extension comme un petit outil fiable, immédiat et moderne. Les visuels doivent montrer la vraie interface `1.0.2`, en grand, avec une seule promesse par image.
+Présenter l’extension comme un petit outil fiable, immédiat et moderne. Les visuels doivent montrer la vraie interface `1.0.3`, en grand, avec une seule promesse par image.
 
 ## Système visuel
 
@@ -29,18 +29,34 @@ Présenter l’extension comme un petit outil fiable, immédiat et moderne. Les 
 ## Ordre recommandé
 
 1. **Vos prochains bus, en un coup d’œil** — capture du tableau de bord.
-2. **Direct + horaires prévus** — mélange de temps réels et théoriques.
-3. **Le bon arrêt, sans ambiguïté** — arrêts homonymes avec commune.
-4. **Toujours visible sur le badge Chrome** — urgence bleu/orange/rouge.
-5. **Une interface qui vous ressemble** — préférences et thème sombre.
+2. **Le direct passe toujours en premier** — les horaires théoriques dépassés sont masqués.
+3. **Tapez « mairie hem »** — recherche souple par débuts de mots.
+4. **Le prochain bus sans ouvrir le popup** — badge affiché dans la vraie barre Chrome.
+5. **À votre façon** — extraits réels des préférences et du code couleur.
+
+## Fichiers prêts pour le Store
+
+Les cinq PNG finaux sont opaques et mesurent exactement `1280 × 800 px` :
+
+- `output/01-hero.png`
+- `output/02-live-and-scheduled.png`
+- `output/03-stop-search.png`
+- `output/04-toolbar-badge.png`
+- `output/05-preferences.png`
+
+Les fichiers modifiables se trouvent dans `slides/`. Le fond réutilisable se trouve dans
+`assets/transit-background-v1.png` et son prompt de génération dans `PROMPT.md`.
 
 ## Icône
 
 Conserver `design/icon-v2-master.png` comme master et les déclinaisons de `src/assets/icons/`. Ne pas remettre de texte dans l’icône : « LILLE » était lisible sur la fiche Store mais disparaissait à 16 px.
 
-## Captures sources
+## Sources des captures
 
-Les captures finales doivent être faites avec le ZIP `dist/lille-bus-extension-v1.0.2.zip`, sans autre extension visible, sans compte personnel et sans onglet sensible. Utiliser des trajets réels mais non personnels et des temps d’attente courts.
+Les interfaces visibles dans les cinq compositions sont des captures de l’extension
+`1.0.3` réellement chargée dans Chrome. Les fichiers `assets/actual-*.png` ne doivent
+pas être redessinés : il faut refaire les captures après toute évolution visible de
+l’interface. Les SVG ajoutent uniquement le fond, les titres et les explications.
 
 ## Tuiles promotionnelles optionnelles
 

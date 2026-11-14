@@ -6,7 +6,7 @@
   <p>Une extension Chrome qui affiche les minutes avant le prochain bus — directement sur l'icône de la barre d'outils, en temps réel.</p>
 
   [![Chrome Web Store](https://img.shields.io/badge/Chrome-Web%20Store-4285F4?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/kjacdkifcibhcolpbooimeidhhjdlfnk)
-  ![Version](https://img.shields.io/badge/version-1.0.2-brightgreen)
+  ![Version](https://img.shields.io/badge/version-1.0.3-brightgreen)
   ![Manifest V3](https://img.shields.io/badge/Manifest-V3-4285F4?logo=googlechrome&logoColor=white)
   ![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue)
   ![MEL Open Data](https://img.shields.io/badge/Data-MEL%20Open%20Data-00a651)
